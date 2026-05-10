@@ -55,12 +55,40 @@ for the full local-dev setup. The thirty-second version:
 pip install -e ".[test]"
 pytest tests_py/ -v
 
-# JS side (once frontend lands in slice A2)
+# JS side
+cd frontend
 npm install
+npm run dev         # dev-mode preview at http://localhost:5173 (see below)
 npm run build       # one-shot bundle to src/termin_airlock_provider/static/bundle.js
 npm run watch       # rebuild on change
 npm test            # vitest
 ```
+
+### Preview the components in a browser
+
+The dev-mode harness mocks the Termin runtime API
+(`window.Termin.registerRenderer`) and mounts each implemented
+contract with a sample IR fragment, so you can iterate on the
+components without standing up the full Termin server.
+
+```bash
+cd frontend
+npm install      # first time only
+npm run dev
+```
+
+Vite prints `Local: http://localhost:5173/`. Open that in any
+browser. As of slice A2 PoC the preview shows
+`airlock.cosmic-orb` (the orbital airlock door scene) with
+`airlock.scenario-narrative` (typewriter overlay) on top — exactly
+the composition the v0.9.4 inciting-incident page uses. The
+narrative content is generic Termin-themed placeholder text; the
+production Airlock scenario lives in the Clarity-Intelligence-internal
+product spec and ships through `.termin` source in slice A3a.
+
+The four contracts not yet implemented (`terminal`,
+`countdown-timer`, `score-axis-card`, `badge-strip`) still mount
+the slice-A1 placeholder; they'll fill in as their slices land.
 
 ## Architecture
 

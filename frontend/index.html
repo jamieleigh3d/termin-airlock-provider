@@ -1,0 +1,29 @@
+<!doctype html>
+<!--
+  Vite dev-mode entry for the termin-airlock-provider preview harness.
+
+  Run with:
+    cd frontend
+    npm run dev
+
+  Then open the URL Vite prints (default http://localhost:5173).
+
+  This is the DEV-MODE preview only — the production bundle the
+  Termin runtime loads is built via `npm run build` and is wired
+  through `src/index.tsx` (the production entry point that registers
+  renderers against `window.Termin.registerRenderer`). The dev
+  harness mocks the Termin runtime API and mounts each contract
+  manually with a sample IR fragment so you can iterate on the
+  components without standing up the full Termin server.
+-->
+<html lang="en" class="bg-black">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>termin-airlock-provider — preview</title>
+  </head>
+  <body class="bg-black m-0 p-0">
+    <div id="airlock-demo-root"></div>
+    <script type="module" src="/src/dev/demo.tsx"></script>
+  </body>
+</html>

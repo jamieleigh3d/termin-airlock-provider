@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (slice A2 PoC — dev-mode preview harness)
+
+- **`frontend/index.html` + `frontend/src/dev/demo.tsx`** — Vite
+  dev-mode preview that mocks `window.Termin.registerRenderer`,
+  imports the production entry point so its registrations fire,
+  and manually mounts `airlock.cosmic-orb` (full-viewport
+  background) with `airlock.scenario-narrative` (typewriter
+  overlay) — same composition the v0.9.4 inciting-incident page
+  uses. Run with `cd frontend && npm install && npm run dev`,
+  then open the URL Vite prints (default `http://localhost:5173`).
+  Demo narrative is generic Termin-themed placeholder text — NOT
+  the production Airlock product scenario, which ships through
+  `.termin` source in slice A3a.
+- **`npm run dev` script** added to `package.json` so the preview
+  command is discoverable from `package.json` directly.
+
 ### Added (slice A2 PoC — `cosmic-orb` + `scenario-narrative`)
 
 - **`CosmicOrb` React component** at
