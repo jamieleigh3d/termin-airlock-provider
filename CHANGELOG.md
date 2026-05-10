@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (Path C — Vite library-mode `process.env.NODE_ENV` substitution)
+
+- **`vite.config.ts` now sets `define: { "process.env.NODE_ENV":
+  JSON.stringify("production") }`.** React's bundled CJS source
+  branches on `process.env.NODE_ENV` to pick dev vs prod code
+  paths. Vite's *app* mode replaces this token at build time, but
+  Vite's *library* mode (`build.lib`) does NOT — the assumption
+  is that a library consumer runs their own bundler that performs
+  the replacement. Our consumer is the browser via a raw
+  `<script src>` tag (the runtime serves `bundle.js` directly),
+  so we do the substitution ourselves. Without the define, the
+  bundle crashed at load with `ReferenceError: process is not
+  defined` before reaching the `Termin.registerRenderer` calls
+  — the contracts never got registered, the page rendered an
+  empty mount-point div, and the only signal was the
+  `[Termin] hydrateCsrMounts: no renderer for "airlock.cosmic-orb"`
+  warning the new termin.js hydrator surfaces (Path C
+  termin-server change).
+- **Bundle size: 591 KB → 203 KB unminified, 175 KB → 63 KB
+  gzipped.** The substitution lets the production build of React
+  tree-shake the dev-only invariants, dev warnings, and the
+  scheduler's profiling hooks. No JS source or component changes
+  — just the build define.
+- Verified end-to-end through the actual Termin runtime via the
+  `airlock-smoke-runtime` launch entry: HTTP request returns the
+  mount-point div with the cosmic-orb contract attribute; the
+  bundle loads via `/_termin/providers/airlock/bundle.js`; the
+  v0.9.4 Path C `hydrateCsrMounts()` finds the mount point,
+  parses the IR fragment, calls the registered renderer, and
+  React mounts the CosmicOrb SVG. Confirmed via DOM inspection
+  (renderer registered, mount-point hydrated, SVG present with
+  the expected `data-airlock-component` and aria-label).
+
 ### Changed (Path B prep — CSR-only switch + Tailwind v4 fix)
 
 - **`AirlockProvider.render_modes` is now `("csr",)`** (was

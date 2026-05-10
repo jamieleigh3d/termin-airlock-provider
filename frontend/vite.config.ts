@@ -18,6 +18,20 @@ import { resolve } from "node:path";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // React's bundled CJS/UMD source references `process.env.NODE_ENV`
+  // for its dev/prod branch. Vite's *app* mode replaces this token at
+  // build time, but Vite's *library* mode (build.lib) does NOT — the
+  // assumption is that a library consumer runs their own bundler that
+  // performs the replacement. Our consumer is the browser via a raw
+  // `<script src>` tag (the runtime serves bundle.js directly), so we
+  // do the substitution ourselves. Without this define, the bundle
+  // crashes at load with `ReferenceError: process is not defined`
+  // before reaching the `Termin.registerRenderer` calls — the
+  // contracts never get registered and the page renders empty
+  // mount-point divs.
+  define: {
+    "process.env.NODE_ENV": JSON.stringify("production"),
+  },
   build: {
     outDir: resolve(__dirname, "../src/termin_airlock_provider/static"),
     emptyOutDir: true,
