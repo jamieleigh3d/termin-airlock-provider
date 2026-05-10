@@ -4,25 +4,34 @@
 
 // Dev-mode preview harness — NOT shipped in the production bundle.
 //
-// Mocks the Termin runtime API (window.Termin.registerRenderer) so
-// the airlock-provider's production entry point (../index.tsx) can
-// register its renderers as it normally would, then manually mounts
-// each contract into a container div with a sample IR fragment that
-// stands in for what the .termin source would emit at runtime.
+// IMPORT ORDER MATTERS:
+//   1. ./setup-termin-mock — assigns window.Termin (must run FIRST).
+//   2. ../index            — production entry point; calls
+//                            registerAllContracts() at module-load
+//                            time, which reads window.Termin set by
+//                            step 1.
+//   3. ./setup-termin-mock — value access for the renderers Map
+//                            (deduplicated; doesn't re-evaluate).
+//
+// ES module imports evaluate in source order on first encounter, so
+// putting the mock-setup import FIRST is what makes the timing
+// correct. Inlining the window.Termin assignment ABOVE an
+// `import "../index"` does NOT work — imports get hoisted to the
+// top of the importing module regardless of source position.
 //
 // The narrative content used here is generic Termin-compiler-themed
 // placeholder text — NOT the production Airlock product scenario,
 // which lives in the Clarity-Intelligence-internal product spec
 // and ships through .termin source in slice A3a.
 
-import React from "react";
+import "./setup-termin-mock";  // step 1: window.Termin assignment
+import "../index";              // step 2: production entry; registers renderers
+
+import React, { useEffect } from "react";
 import { createRoot } from "react-dom/client";
 
-import { CosmicOrb } from "../components/CosmicOrb";
-import {
-  ScenarioNarrative,
-  NarrativeLine,
-} from "../components/ScenarioNarrative";
+import { renderers } from "./setup-termin-mock";  // step 3: value access
+import { NarrativeLine } from "../components/ScenarioNarrative";
 
 import "../styles/airlock.css";
 
@@ -47,56 +56,28 @@ const DEMO_LINES: NarrativeLine[] = [
 ];
 
 
-// Mock the Termin runtime API. The production index.tsx calls
-// window.Termin.registerRenderer(contract, fn) at module-load time;
-// our mock captures those registrations into a map so the dev
-// harness can invoke them with sample IR fragments.
-type Renderer = (mountPoint: HTMLElement, irFragment: unknown) => void;
-const renderers = new Map<string, Renderer>();
-
-declare global {
-  interface Window {
-    Termin?: {
-      registerRenderer: (contract: string, renderer: Renderer) => void;
-      action?: (payload: unknown) => Promise<unknown>;
-      subscribe?: (channel: string, handler: (event: unknown) => void) => void;
-    };
-  }
-}
-
-window.Termin = {
-  registerRenderer: (contract: string, renderer: Renderer) => {
-    renderers.set(contract, renderer);
-    console.log(`[demo harness] Registered renderer for: ${contract}`);
-  },
-};
-
-// Now import the production entry point — its registerAllContracts()
-// call fires the mock window.Termin.registerRenderer above and the
-// six contracts get registered.
-//
-// Side-effect import — required for the registerAllContracts() call.
-import "../index";
-
-
-// Build the demo page: a labeled section per contract showing each
-// in isolation. The CosmicOrb sits on top because it's positioned
-// absolute (filling its container); the narrative overlays it via
-// stacking + a content panel at the bottom of the viewport.
 const DemoPage: React.FC = () => {
-  React.useEffect(() => {
-    // Mount cosmic-orb into its container. The IR fragment is empty
-    // because cosmic-orb takes no props at this slice.
+  useEffect(() => {
     const orbMount = document.getElementById("demo-cosmic-orb");
     const narrativeMount = document.getElementById("demo-scenario-narrative");
 
     const orbRenderer = renderers.get("airlock.cosmic-orb");
     const narrativeRenderer = renderers.get("airlock.scenario-narrative");
 
-    if (orbMount && orbRenderer) {
+    if (!orbRenderer || !narrativeRenderer) {
+      // eslint-disable-next-line no-console
+      console.error(
+        "[demo harness] Production entry point did not register one " +
+          "or both renderers. Renderers seen: " +
+          JSON.stringify([...renderers.keys()]),
+      );
+      return;
+    }
+
+    if (orbMount) {
       orbRenderer(orbMount, { type: "cosmic-orb", props: {} });
     }
-    if (narrativeMount && narrativeRenderer) {
+    if (narrativeMount) {
       narrativeRenderer(narrativeMount, {
         type: "scenario-narrative",
         props: { lines: DEMO_LINES },

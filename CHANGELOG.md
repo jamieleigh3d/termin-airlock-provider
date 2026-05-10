@@ -7,6 +7,109 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed (Path B prep — CSR-only switch + Tailwind v4 fix)
+
+- **`AirlockProvider.render_modes` is now `("csr",)`** (was
+  `("ssr", "csr")` from slice A1). The runtime's CSR shell path
+  in `termin-server` is the integration surface that dispatches
+  custom-namespace contracts to registered providers today
+  (Spectrum is the precedent). The SSR dispatch path in
+  `termin_server.presentation.render_component` does not yet
+  look up custom providers by `node.contract`; a follow-up slice
+  in the v0.9.4 work (Path C) wires that, after which this
+  provider may opt back into `("ssr", "csr")`.
+- **`render_ssr` now raises `NotImplementedError`** (matches
+  `SpectrumProvider.render_ssr` convention). Calling it on a
+  CSR-only provider is a deployment misconfiguration; failing
+  loud catches the misconfiguration at the call site rather than
+  silently returning empty markup.
+- **`ssr_shells.py` deleted.** It was dead code in CSR-only mode
+  — the runtime's CSR shell path emits its own mount-point
+  containers; the provider doesn't need to. The Jinja2-based
+  placeholder shells from slice A1 served their purpose
+  documenting the contract surface; that documentation now lives
+  in the provider docstrings.
+- **Updated the two provider-protocol tests** to assert the new
+  CSR-only contract:
+  - `test_airlock_provider_declares_csr_only` (was
+    `test_airlock_provider_declares_ssr_and_csr`)
+  - `test_render_ssr_raises_not_implemented` (was
+    `test_render_ssr_known_contract_returns_marker`)
+  - The 9-test `tests_py/test_ssr_shells.py` file is deleted
+    along with the module it tested.
+- Total Python tests: 36 → 26 (-10 from the deletions; -1 from
+  the protocol test consolidation).
+
+### Fixed (Path B — Tailwind v4 setup + dev preview hoisting bug)
+
+- **Installed `@tailwindcss/vite`** plugin and added it to
+  `vite.config.ts` plugins. v0.9.4-dev0 shipped without the
+  Tailwind processor wired to Vite, which meant the CSS bundle
+  contained Tailwind's default theme dump but NONE of the custom
+  utility classes the React components used (`text-accent-cyan`,
+  `bg-bg-elevated`, `max-w-2xl`, etc.). Without the plugin every
+  utility class was a no-op, the layout collapsed, colors didn't
+  apply.
+- **Ported theme tokens from `tailwind.config.js` (v3 JS config)
+  to v4 CSS-first `@theme` directives** in
+  `frontend/src/styles/airlock.css`. Tailwind v4 reads custom
+  colors and font tokens from `@theme { --color-X: ...; }`
+  declarations; the `--color-X` custom properties drive
+  `text-X` / `bg-X` / `border-X` utility class generation. The
+  Python source-of-truth at `theme_tokens.py` stays unchanged;
+  the CSS now mirrors it. Lockstep is manual until a build-time
+  generator lands.
+- **Deleted `tailwind.config.js`** — the v3 JS config is no
+  longer consulted in v4 CSS-first mode.
+- **Fixed the ES module hoisting bug in `dev/demo.tsx`.** The
+  v0.9.4-dev0 dev-preview harness inlined
+  `window.Termin = {...}` ABOVE `import "../index"`, expecting
+  the assignment to run first. ES module imports get hoisted to
+  the top of the importing module regardless of source position,
+  so `import "../index"` ran first, the production entry point
+  saw `window.Termin` undefined, printed a warning, and bailed
+  before mounting any renderers. Split the mock setup into a
+  separate `dev/setup-termin-mock.ts` module imported FIRST in
+  source order — ES modules evaluate in source-order on first
+  encounter, so the assignment now runs before the production
+  entry's registrations execute.
+- **Bundle size: 591 KB unminified, 175 KB gzipped** (unchanged
+  from slice A2 PoC — the JIT processor only emits utilities
+  the components reference, so adding the plugin REDUCED the
+  CSS size from 21 KB to 13 KB without changing the JS bundle).
+- Verified end-to-end via Claude Preview MCP — the dev harness
+  now renders the CosmicOrb SVG with the typewriter narrative
+  overlay, JetBrains Mono font applied, custom colors apply,
+  layout correct.
+
+### Notes (Path B — runtime preview deferred to Path C)
+
+- Path B was scoped to give the dev-mode preview AND attempt the
+  real-runtime preview. The dev preview works. The real-runtime
+  preview hit a known wall:
+  `bootstrap.py::page_should_use_shell` in `termin-server`
+  triggers the CSR shell path ONLY when the bound provider for
+  `presentation-base.page` is CSR-only. With tailwind-default
+  bound to `presentation-base` (the standard config), the SSR
+  pipeline runs, and the SSR pipeline at
+  `presentation.py::render_component` line 1033 dispatches by
+  `node.type` (NOT `node.contract`) — which means the
+  `Using "airlock.cosmic-orb"` override in the smoke `.termin`
+  source is dropped on the floor at render time, and the table
+  renders via the built-in Tailwind `data_table` renderer.
+- The fix is the per-component dispatch the docstring of
+  `page_should_use_shell` references as "5b.3 full per-contract
+  dispatch." That work is Path C in the v0.9.4 plan — wires
+  `node.contract` lookup into the SSR dispatch path so
+  `Using "airlock.cosmic-orb"` actually reaches
+  `provider.render_ssr` (or, for CSR-only providers, emits the
+  bundle's mount-point div for the per-component dispatch).
+  3-4 strategic lines per the agent audit.
+- `examples-dev/airlock_smoke.termin` and
+  `airlock_smoke.deploy.json` ship in this commit (under
+  `termin-compiler`) so Path C has a ready fixture to validate
+  against. The compile is clean today; the dispatch is the gap.
+
 ### Added (slice A2 PoC — dev-mode preview harness)
 
 - **`frontend/index.html` + `frontend/src/dev/demo.tsx`** — Vite

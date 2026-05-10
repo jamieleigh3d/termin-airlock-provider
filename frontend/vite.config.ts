@@ -4,6 +4,7 @@
 
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import { resolve } from "node:path";
 
 // Build target: a single ES-module bundle that termin-server serves
@@ -16,7 +17,7 @@ import { resolve } from "node:path";
 // entry point makes at module evaluation time.
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   build: {
     outDir: resolve(__dirname, "../src/termin_airlock_provider/static"),
     emptyOutDir: true,

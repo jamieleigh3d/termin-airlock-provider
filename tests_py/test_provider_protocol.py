@@ -47,12 +47,18 @@ def test_airlock_provider_declares_six_custom_contracts():
     )
 
 
-def test_airlock_provider_declares_ssr_and_csr():
-    """Per tech design §5.3: SSR for fast first paint, CSR for
-    everything interactive. NOT csr-only (that's Spectrum's pattern).
+def test_airlock_provider_declares_csr_only():
+    """CSR-only — the runtime's CSR shell path is what dispatches
+    custom-namespace contracts to registered providers today
+    (Spectrum is the precedent). The SSR dispatch path in
+    ``termin_server.presentation.render_component`` does not yet
+    look up custom providers by ``node.contract``; a follow-up slice
+    in the v0.9.4 work wires that, after which this provider may
+    opt back into ``("ssr", "csr")``. Until then, declaring SSR
+    would silently fall through to the Jinja2 default renderer.
     """
     provider = AirlockProvider()
-    assert set(provider.render_modes) == {"ssr", "csr"}
+    assert provider.render_modes == ("csr",)
 
 
 def test_airlock_constants_exposed():
@@ -64,35 +70,20 @@ def test_airlock_constants_exposed():
     assert len(AIRLOCK_CONTRACTS) == 6
 
 
-def test_render_ssr_unknown_contract_raises():
-    """Calling render_ssr with a contract this provider doesn't
-    declare is a deployment misconfiguration — fail loud, not silent.
+def test_render_ssr_raises_not_implemented():
+    """Calling render_ssr on a CSR-only provider is a deployment
+    misconfiguration — fail loud per the same convention as
+    SpectrumProvider. The runtime should never reach this method
+    for a provider whose render_modes excludes ``"ssr"``.
     """
     provider = AirlockProvider()
-    with pytest.raises(ValueError, match="does not declare contract"):
+    with pytest.raises(NotImplementedError, match="CSR-only"):
         provider.render_ssr(
-            contract="presentation-base.text",  # not an airlock contract
+            contract="airlock.cosmic-orb",
             ir_fragment={},
             data=None,
             principal_context=None,
         )
-
-
-def test_render_ssr_known_contract_returns_marker():
-    """Slice A1 contract: every contract returns a
-    ``<div data-airlock-contract="...">`` marker the CSR bundle
-    targets to mount its real React component into. The actual
-    placeholder shape is asserted in test_ssr_shells.py.
-    """
-    provider = AirlockProvider()
-    html = provider.render_ssr(
-        contract="airlock.cosmic-orb",
-        ir_fragment={"type": "cosmic-orb", "props": {}},
-        data=None,
-        principal_context=None,
-    )
-    assert 'data-airlock-contract="airlock.cosmic-orb"' in html
-    assert "<div" in html
 
 
 def test_csr_bundle_url_default():

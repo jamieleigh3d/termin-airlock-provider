@@ -92,18 +92,23 @@ the slice-A1 placeholder; they'll fill in as their slices land.
 
 ## Architecture
 
-- **SSR + CSR hybrid.** The provider renders an SSR placeholder per
-  contract (fast first paint, no flash); the CSR bundle hydrates each
-  shell into the full interactive surface (typewriter animation, terminal
-  chat, timer countdown, tool-call inspector, badge hover).
+- **CSR-only.** `render_modes = ("csr",)`. The runtime's CSR shell
+  path in termin-server is the integration surface that dispatches
+  custom-namespace contracts to registered providers today (Spectrum
+  is the precedent). The SSR dispatch path doesn't yet look up
+  custom providers by `node.contract`; once that wires (a v0.9.4
+  follow-up), this provider may opt back into `("ssr", "csr")`.
 - **Termin runtime is authoritative for trust and data.** The frontend
   calls Termin's auto-generated CRUD endpoints, compute trigger
   endpoints, and the v0.9.2 conversation-append handler. There is no
   separate API server.
-- **CRT theme via Tailwind v4 + custom CSS.** Color palette and
+- **CRT theme via Tailwind v4 CSS-first config.** Color palette and
   typography come from
   [`docs/termin-v0.9.4-airlock-on-termin-tech-design.md`](https://github.com/jamieleigh3d/termin-compiler/blob/main/docs/termin-v0.9.4-airlock-on-termin-tech-design.md)
   §5.4 (deep-space backgrounds, cyan/amber/red accents, JetBrains Mono).
+  Tokens declared via Tailwind v4 `@theme` directives in
+  `frontend/src/styles/airlock.css`; mirrored in
+  `src/termin_airlock_provider/theme_tokens.py` for the Python side.
   Accessibility: every color-coded role distinction has a text-label
   backup (label prefixes, alignment, icon shape) per BRD §13.4.
 

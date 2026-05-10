@@ -1,24 +1,54 @@
 /* Copyright 2026 Jamie-Leigh Blake and Termin project contributors
    Licensed under the Apache License, Version 2.0 (the "License").
 
-   Slice A1 — minimal Tailwind v4 import + a couple of shell-level
-   classes. Slice A2 adds the CRT scanline + glow + vignette CSS
-   the production Airlock frontend uses.
+   Tailwind v4 entry. Theme tokens declared via the v4 CSS-first
+   @theme directive — mirrors src/termin_airlock_provider/theme_tokens.py
+   on the Python side. The two need to stay in lockstep manually until
+   we add a build-time generator (slice A2 follow-up).
+
+   Color naming convention: each Tailwind color name is prefixed with
+   the role it serves (bg-deep, text-primary, accent-cyan) so the
+   utility classes read naturally in JSX (e.g. text-accent-red,
+   bg-bg-elevated). The `--color-*` custom properties under @theme
+   are what Tailwind v4 reads to generate the corresponding utility
+   classes (text-X, bg-X, border-X).
 */
 
 @import "tailwindcss";
 
-/* Airlock SSR shell base — every contract's placeholder div lives
-   inside one of these classes. Slice A2 will introduce per-contract
-   shell skeletons (cosmic-orb's SVG container, terminal's scrolling
-   chat region, etc.). */
+@theme {
+  /* Backgrounds (deep -> elevated) */
+  --color-bg-deep: #0a0e17;
+  --color-bg-panel: #0d1117;
+  --color-bg-elevated: #0d1a2d;
 
+  /* Foreground typography */
+  --color-text-primary: #e0e8f0;
+  --color-text-secondary: #8899aa;
+  --color-text-muted: #556677;
+
+  /* Accent palette - every color also has a non-color backup per
+     BRD #2 §13.4 (label prefix, alignment, icon shape). See the
+     ROLE_DISTINCTION_BACKUPS map in theme_tokens.py for the
+     canonical mapping. */
+  --color-accent-cyan: #00e5ff;
+  --color-accent-amber: #ffab00;
+  --color-accent-red: #ff1744;
+  --color-accent-green: #00e676;
+  --color-accent-blue: #304ffe;
+
+  /* JetBrains Mono — overrides the default font-mono utility. */
+  --font-mono: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+}
+
+/* SSR shell base classes — applied by the runtime when it emits
+   the per-contract mount-point divs. */
 .airlock-shell {
-  @apply font-mono;
+  font-family: var(--font-mono);
 }
 
 .airlock-placeholder {
   /* Slice A1 marker — visible in dev so wiring is obvious. */
-  background: #0d1117;
-  color: #e0e8f0;
+  background: var(--color-bg-panel);
+  color: var(--color-text-primary);
 }

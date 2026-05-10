@@ -29,8 +29,6 @@ from termin_core.providers.presentation_contract import (
     PrincipalContext,
 )
 
-from termin_airlock_provider.ssr_shells import render_shell
-
 
 # Default bundle URL — the runtime serves this from package data via
 # its presentation-bundle endpoint surface. Operators override via
@@ -57,10 +55,15 @@ class AirlockProvider:
     """Termin presentation provider for the Airlock CRT UI.
 
     Declares six custom contracts in the ``airlock.*`` namespace.
-    Render mode is SSR + CSR hybrid: SSR for the initial paint
-    placeholder shell, CSR for everything interactive (typewriter
-    animation, terminal chat, timer countdown, tool-call inspector,
-    badge hover).
+    **CSR-only** — the CSR shell path in termin-server is the
+    integration surface that dispatches custom-namespace contracts
+    to registered providers today (Spectrum is the precedent). The
+    SSR dispatch path in ``termin_server.presentation.render_component``
+    only consults ``node.type`` against a hardcoded
+    ``presentation-base.*`` Jinja2 renderer table; it does not yet
+    look up custom providers by ``node.contract``. A follow-up slice
+    (Path C in the v0.9.4 work) wires the SSR dispatch path; this
+    provider may then opt back into ``("ssr", "csr")``.
 
     Constructor args:
         bundle_url_override: optional URL string. When set, replaces
@@ -69,7 +72,7 @@ class AirlockProvider:
     """
 
     declared_contracts: tuple[str, ...] = AIRLOCK_CONTRACTS
-    render_modes: tuple[str, ...] = ("ssr", "csr")
+    render_modes: tuple[str, ...] = ("csr",)
 
     def __init__(self, bundle_url_override: Optional[str] = None) -> None:
         self._bundle_url = bundle_url_override or DEFAULT_BUNDLE_URL
@@ -81,21 +84,18 @@ class AirlockProvider:
         data: PresentationData,
         principal_context: PrincipalContext,
     ) -> str:
-        """Render a contract's SSR placeholder shell.
-
-        Slice A1 (this scaffold): every contract returns a
-        ``<div data-airlock-contract="...">`` marker the CSR bundle
-        targets to mount its real React component into. Slice A2
-        replaces these with hydration-ready containers carrying the
-        critical-CSS for the CRT aesthetic so first-paint isn't a
-        white flash.
+        """Calling render_ssr on a CSR-only provider is a deployment
+        misconfiguration — the runtime should never reach here. Fail
+        loud per the same convention as
+        ``termin_spectrum.SpectrumProvider.render_ssr``.
         """
-        if contract not in self.declared_contracts:
-            raise ValueError(
-                f"AirlockProvider does not declare contract {contract!r}. "
-                f"Declared: {self.declared_contracts}"
-            )
-        return render_shell(contract, ir_fragment, data, principal_context)
+        raise NotImplementedError(
+            "AirlockProvider is CSR-only. The custom airlock.* contracts "
+            "are dispatched through the runtime's CSR shell path. Bind a "
+            "different provider for any contract that requires SSR, or "
+            "wait for the SSR dispatch path in termin-server to be wired "
+            "for custom namespaces (a v0.9.4 follow-up)."
+        )
 
     def csr_bundle_url(self) -> Optional[str]:
         """Return the JS bundle URL for CSR-mode rendering."""
