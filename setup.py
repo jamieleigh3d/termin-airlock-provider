@@ -24,10 +24,16 @@ setup(
     packages=find_packages(where="src"),
     include_package_data=True,
     package_data={
-        # The built JS bundle ships as package data. Built in CI; not
-        # committed (see .gitignore). Wheel-builds on release tags
-        # produce the artifact and bake it in.
-        "termin_airlock_provider": ["static/bundle.js"],
+        # Built bundle artifacts ship as package data. Built in CI;
+        # not committed (see .gitignore). Wheel-builds on release tags
+        # produce the artifacts and bake them in. Vite emits the JS
+        # bundle, its source map, and an extracted CSS file; the
+        # runtime serves all three from the static/ directory.
+        "termin_airlock_provider": [
+            "static/bundle.js",
+            "static/bundle.js.map",
+            "static/style.css",
+        ],
     },
     python_requires=">=3.11",
     install_requires=[

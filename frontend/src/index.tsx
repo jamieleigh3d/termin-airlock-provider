@@ -18,6 +18,9 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 
+import { CosmicOrb } from "./components/CosmicOrb";
+import { ScenarioNarrative, NarrativeLine } from "./components/ScenarioNarrative";
+
 import "./styles/airlock.css";
 
 // The Termin runtime exposes a global API for renderer registration.
@@ -48,10 +51,11 @@ const AIRLOCK_CONTRACTS = [
   "airlock.badge-strip",
 ] as const;
 
-// Slice A1 placeholder component — labels the mount point with the
-// contract name so a developer running the bundle locally can confirm
-// the dispatch is wiring up correctly. Slice A2 swaps each per-
-// contract placeholder for the real React component.
+// Slice A1 placeholder component — used for contracts that don't yet
+// have a real React component implemented. Slice A2 PoC adds real
+// renderers for `airlock.cosmic-orb` and `airlock.scenario-narrative`;
+// the other four contracts continue to mount this placeholder until
+// their slice lands.
 const PlaceholderRenderer: React.FC<{ contract: string; ir: unknown }> = ({
   contract,
   ir,
@@ -62,7 +66,7 @@ const PlaceholderRenderer: React.FC<{ contract: string; ir: unknown }> = ({
         Airlock contract: {contract}
       </div>
       <div className="text-xs mt-2">
-        Slice A1 placeholder. Real renderer lands in slice A2.
+        Slice A1 placeholder. Real renderer lands in a later slice.
       </div>
       <details className="mt-2 text-xs">
         <summary className="cursor-pointer text-text-muted">
@@ -76,10 +80,22 @@ const PlaceholderRenderer: React.FC<{ contract: string; ir: unknown }> = ({
   );
 };
 
-// Bootstrap: register one labeled-placeholder renderer per contract.
-// The runtime calls the renderer with the mount point and the
-// JSON-decoded IR fragment. Slice A2 replaces the registration body
-// with the real per-component dispatch.
+/** Pull the typed `lines` prop out of the runtime-supplied IR
+ *  fragment for the scenario-narrative contract. Defensive: an
+ *  authoring error in .termin source might omit lines or supply a
+ *  wrong type — fall back to an empty list rather than crashing the
+ *  page render. */
+function extractNarrativeLines(irFragment: unknown): NarrativeLine[] {
+  if (!irFragment || typeof irFragment !== "object") return [];
+  const fragment = irFragment as { props?: { lines?: unknown } };
+  const candidate = fragment.props?.lines;
+  if (!Array.isArray(candidate)) return [];
+  return candidate as NarrativeLine[];
+}
+
+// Bootstrap: register one renderer per contract. Slice A2 PoC wires
+// real renderers for cosmic-orb + scenario-narrative; the other four
+// fall back to the slice-A1 placeholder until their slice lands.
 function registerAllContracts(): void {
   if (!window.Termin || !window.Termin.registerRenderer) {
     // Bundle was loaded outside a Termin runtime — log and bail
@@ -94,7 +110,28 @@ function registerAllContracts(): void {
     return;
   }
 
-  for (const contract of AIRLOCK_CONTRACTS) {
+  // Real renderers (slice A2 PoC).
+  window.Termin.registerRenderer("airlock.cosmic-orb", (mountPoint) => {
+    const root = createRoot(mountPoint);
+    root.render(<CosmicOrb />);
+  });
+
+  window.Termin.registerRenderer(
+    "airlock.scenario-narrative",
+    (mountPoint, irFragment) => {
+      const root = createRoot(mountPoint);
+      root.render(
+        <ScenarioNarrative lines={extractNarrativeLines(irFragment)} />,
+      );
+    },
+  );
+
+  // Placeholder renderers for the four contracts not yet implemented
+  // in slice A2 PoC. Slice A2 follow-on (or A3+) replaces each.
+  const placeholderContracts = AIRLOCK_CONTRACTS.filter(
+    (c) => c !== "airlock.cosmic-orb" && c !== "airlock.scenario-narrative",
+  );
+  for (const contract of placeholderContracts) {
     window.Termin.registerRenderer(contract, (mountPoint, irFragment) => {
       const root = createRoot(mountPoint);
       root.render(
