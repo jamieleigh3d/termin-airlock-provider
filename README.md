@@ -1,0 +1,97 @@
+# termin-airlock-provider
+
+The Termin presentation provider for [Airlock](https://airlock.getclarit.ai),
+the Clarity Intelligence AI-fluency assessment.
+
+This package implements six custom presentation contracts in the `airlock.*`
+namespace, ports the Airlock React frontend into a single CSR bundle, and
+delivers the CRT-themed scenario UI as a Termin presentation provider —
+parallel to [`termin-spectrum-provider`](https://github.com/jamieleigh3d/termin-spectrum-provider)
+in package shape.
+
+**Status:** scaffold (slice A1 of the v0.9.4 Airlock-on-Termin tech design).
+The provider declares its six contracts and ships SSR placeholder shells +
+a CSR bundle skeleton; real component renderers land in slice A2.
+
+## What this is
+
+Airlock-on-Termin is the v0.9.4 advanced sample app for the
+[Termin platform](https://termin.dev). The `.termin` source for the app
+ships in [`termin-compiler/examples/airlock.termin`](https://github.com/jamieleigh3d/termin-compiler).
+This repository ships only the presentation provider — the visual surface
+that turns the compiled app's component tree into the CRT-themed Airlock
+scenario UI.
+
+The production Airlock continues to run independently on its existing
+stack. This Termin port is a second instance of the product, hosted on
+Termin, used as a forcing function for the platform's security and
+provider-system claims. See
+[`termin-compiler/docs/termin-v0.9.4-airlock-on-termin-tech-design.md`](https://github.com/jamieleigh3d/termin-compiler/blob/main/docs/termin-v0.9.4-airlock-on-termin-tech-design.md)
+for the technical design that motivates this package.
+
+## The six contracts
+
+| Contract | Purpose |
+|----------|---------|
+| `airlock.cosmic-orb` | Animated SVG starfield + planet + airlock door scene (inciting incident). |
+| `airlock.scenario-narrative` | Typewriter-effect text reveal (inciting incident sequence). |
+| `airlock.terminal` | Scrolling chat with role-differentiated message styling, input box, tool-call inspector panel. Binds to a v0.9.2 `conversation` field. |
+| `airlock.countdown-timer` | User + ARIA timers with intensity-escalation visual cues (always-visible top bar). |
+| `airlock.score-axis-card` | Three-axis score display with evidence + next-level tip (results view). |
+| `airlock.badge-strip` | Badge collection display, earned + unearned, accessible (profile + results). |
+
+Each contract is registered against the Termin runtime's `ContractRegistry`
+in the `airlock` namespace. The provider's SSR + CSR pair handles every
+contract via a `contract`-discriminator dispatch (mirroring the Spectrum
+provider's pattern but with hybrid render mode).
+
+## Quick start
+
+This is a hybrid Python + Node project. See [CONTRIBUTING.md](CONTRIBUTING.md)
+for the full local-dev setup. The thirty-second version:
+
+```bash
+# Python side
+pip install -e ".[test]"
+pytest tests_py/ -v
+
+# JS side (once frontend lands in slice A2)
+npm install
+npm run build       # one-shot bundle to src/termin_airlock_provider/static/bundle.js
+npm run watch       # rebuild on change
+npm test            # vitest
+```
+
+## Architecture
+
+- **SSR + CSR hybrid.** The provider renders an SSR placeholder per
+  contract (fast first paint, no flash); the CSR bundle hydrates each
+  shell into the full interactive surface (typewriter animation, terminal
+  chat, timer countdown, tool-call inspector, badge hover).
+- **Termin runtime is authoritative for trust and data.** The frontend
+  calls Termin's auto-generated CRUD endpoints, compute trigger
+  endpoints, and the v0.9.2 conversation-append handler. There is no
+  separate API server.
+- **CRT theme via Tailwind v4 + custom CSS.** Color palette and
+  typography come from
+  [`docs/termin-v0.9.4-airlock-on-termin-tech-design.md`](https://github.com/jamieleigh3d/termin-compiler/blob/main/docs/termin-v0.9.4-airlock-on-termin-tech-design.md)
+  §5.4 (deep-space backgrounds, cyan/amber/red accents, JetBrains Mono).
+  Accessibility: every color-coded role distinction has a text-label
+  backup (label prefixes, alignment, icon shape) per BRD §13.4.
+
+## Versioning
+
+Follows the Termin v0.9 family release cadence. The package version
+is declared in `src/termin_airlock_provider/__init__.py::__version__`
+once and imported everywhere else, per the
+[Termin version policy](https://github.com/jamieleigh3d/termin-compiler/blob/main/docs/version-policy.md).
+
+## License
+
+Apache License 2.0. See [LICENSE](LICENSE) for the full text and
+[NOTICE](NOTICE) for attribution.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Contributions require a Developer
+Certificate of Origin (DCO) sign-off on each commit.

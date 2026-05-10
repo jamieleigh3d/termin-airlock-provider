@@ -1,0 +1,21 @@
+termin-airlock-provider
+Copyright 2026 Jamie-Leigh Blake and Termin project contributors
+
+This product includes software developed by the Termin project
+(https://termin.dev).
+
+This product depends on React (https://react.dev), which is Copyright Meta
+Platforms, Inc. and affiliates and licensed under the MIT License.
+
+This product depends on Tailwind CSS (https://tailwindcss.com/), which is
+Copyright Tailwind Labs Inc. and licensed under the MIT License.
+
+This product depends on Vite (https://vitejs.dev/), which is Copyright
+2019-present Yuxi (Evan) You and Vite contributors and licensed under
+the MIT License.
+
+The Airlock product itself is a Clarity Intelligence application
+(https://airlock.getclarit.ai); this provider package implements the
+Termin presentation surface for that product. Product BRD and product
+specification are maintained outside this repository by Clarity
+Intelligence.

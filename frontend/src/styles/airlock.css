@@ -1,0 +1,24 @@
+/* Copyright 2026 Jamie-Leigh Blake and Termin project contributors
+   Licensed under the Apache License, Version 2.0 (the "License").
+
+   Slice A1 — minimal Tailwind v4 import + a couple of shell-level
+   classes. Slice A2 adds the CRT scanline + glow + vignette CSS
+   the production Airlock frontend uses.
+*/
+
+@import "tailwindcss";
+
+/* Airlock SSR shell base — every contract's placeholder div lives
+   inside one of these classes. Slice A2 will introduce per-contract
+   shell skeletons (cosmic-orb's SVG container, terminal's scrolling
+   chat region, etc.). */
+
+.airlock-shell {
+  @apply font-mono;
+}
+
+.airlock-placeholder {
+  /* Slice A1 marker — visible in dev so wiring is obvious. */
+  background: #0d1117;
+  color: #e0e8f0;
+}
