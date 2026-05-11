@@ -29,6 +29,15 @@ import {
 } from "./components/ScoreAxisCard";
 import { Terminal, ConversationEntry } from "./components/Terminal";
 
+// v0.9.4 A5: live data-fetching wrappers. The runtime's SSR path
+// passes empty PresentationData and the CSR mount serializes the
+// IR node without records — these wrappers do the fetch on
+// mount until server-side bound_data plumbing lands (v0.10).
+import { LiveCountdownTimer } from "./components/live/LiveCountdownTimer";
+import { LiveScoreAxisCards } from "./components/live/LiveScoreAxisCards";
+import { LiveBadgeStrip } from "./components/live/LiveBadgeStrip";
+import { LiveTerminal } from "./components/live/LiveTerminal";
+
 import "./styles/airlock.css";
 
 // The Termin runtime exposes a global API for renderer registration.
@@ -392,26 +401,60 @@ function registerAllContracts(): void {
   window.Termin.registerRenderer(
     "airlock.countdown-timer",
     (mountPoint, irFragment) => {
+      // Prefer runtime-supplied props when present (v0.10+ when
+      // bound_data plumbing lands); otherwise the live wrapper
+      // fetches on mount.
+      const fromProps = extractCountdownTimerProps(irFragment);
       const root = createRoot(mountPoint);
-      root.render(<CountdownTimer {...extractCountdownTimerProps(irFragment)} />);
+      // The live wrapper is the v0.9.4 default — empty fragments
+      // are the norm today. Once the runtime starts emitting
+      // pre-computed props the static path will dominate; the
+      // check below is cheap.
+      const hasRuntimeData =
+        fromProps.remainingSeconds > 0 ||
+        fromProps.criticalThreshold !== undefined ||
+        fromProps.isSafe !== undefined;
+      if (hasRuntimeData) {
+        root.render(<CountdownTimer {...fromProps} />);
+      } else {
+        root.render(<LiveCountdownTimer />);
+      }
     },
   );
 
   window.Termin.registerRenderer(
     "airlock.badge-strip",
     (mountPoint, irFragment) => {
-      const { catalog, earned } = extractBadgeStripProps(irFragment);
+      const fromProps = extractBadgeStripProps(irFragment);
       const root = createRoot(mountPoint);
-      root.render(<BadgeStrip catalog={catalog} earned={earned} />);
+      // Runtime-supplied catalog wins; otherwise the live wrapper
+      // fetches the profile and uses the hardcoded airlock catalog.
+      if (fromProps.catalog.length > 0) {
+        root.render(
+          <BadgeStrip
+            catalog={fromProps.catalog}
+            earned={fromProps.earned}
+          />,
+        );
+      } else {
+        root.render(<LiveBadgeStrip />);
+      }
     },
   );
 
   window.Termin.registerRenderer(
     "airlock.score-axis-card",
     (mountPoint, irFragment) => {
-      const props = extractScoreAxisCardProps(irFragment);
+      const fromProps = extractScoreAxisCardProps(irFragment);
       const root = createRoot(mountPoint);
-      root.render(<ScoreAxisCard {...props} />);
+      // Runtime-supplied title means a single-axis fragment (the
+      // future bound_data path); otherwise the live wrapper
+      // composes all three axes from one session.scores read.
+      if (fromProps.title) {
+        root.render(<ScoreAxisCard {...fromProps} />);
+      } else {
+        root.render(<LiveScoreAxisCards />);
+      }
     },
   );
 
@@ -421,29 +464,34 @@ function registerAllContracts(): void {
       const { entries, readOnly, parentRecordId, conversationField } =
         extractTerminalProps(irFragment);
       const root = createRoot(mountPoint);
-      // The runtime exposes window.Termin.action for the chat-input
-      // wiring (see termin-server's static/termin.js). When available,
-      // submitting the input fires an append-to-conversation action.
-      // When absent (rare — tests / preview without action support)
-      // the terminal renders read-only by omitting onSend.
-      const onSend =
-        window.Termin?.action && parentRecordId && conversationField
-          ? (text: string) => {
-              window.Termin!.action!({
-                kind: "append",
-                content: "sessions",
-                record_id: parentRecordId,
-                field: conversationField,
-                payload: { kind: "user", body: text },
-              }).catch((err: unknown) => {
-                // eslint-disable-next-line no-console
-                console.error("[airlock.terminal] action.append failed:", err);
-              });
-            }
-          : undefined;
-      root.render(
-        <Terminal entries={entries} readOnly={readOnly} onSend={onSend} />,
-      );
+      // Static-prop path: kept for when bound_data is wired (the IR
+      // fragment carries pre-extracted entries + parent_record_id).
+      // Live path: fetch on mount.
+      if (entries.length > 0 && parentRecordId !== undefined) {
+        const onSend =
+          window.Termin?.action && conversationField
+            ? (text: string) => {
+                window.Termin!.action!({
+                  kind: "append",
+                  content: "sessions",
+                  record_id: parentRecordId,
+                  field: conversationField,
+                  payload: { kind: "user", body: text },
+                }).catch((err: unknown) => {
+                  // eslint-disable-next-line no-console
+                  console.error(
+                    "[airlock.terminal] action.append failed:",
+                    err,
+                  );
+                });
+              }
+            : undefined;
+        root.render(
+          <Terminal entries={entries} readOnly={readOnly} onSend={onSend} />,
+        );
+      } else {
+        root.render(<LiveTerminal />);
+      }
     },
   );
 

@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (slice A5 — live data-fetching wrappers)
+
+- **`LiveCountdownTimer`, `LiveScoreAxisCards`, `LiveBadgeStrip`,
+  `LiveTerminal`** in `frontend/src/components/live/`. Each
+  wraps its inner component with a fetch-on-mount that hits the
+  Termin REST surface (`/api/v1/<source>`), picks the relevant
+  record(s) (in-scenario session, post-game complete session,
+  caller's profile), parses the field shape (JSON-text for
+  aiosqlite-backed conversation_log + all_badges + scores), and
+  computes the component's props.
+
+  Background. The v0.9.4 runtime's SSR path passes empty
+  PresentationData to `provider.render_ssr`, and the CSR mount-
+  point serializes the IR node without records. The .termin
+  source declares `Display a table of sessions / Using
+  "airlock.X"`, which produces an IR fragment with the source
+  name but no rows. These wrappers do what the runtime doesn't
+  yet: fetch the records and compute the props the inner
+  component needs.
+
+  Each wrapper renders a placeholder (zero-second timer, loading
+  axis cards, no-earned-badges silhouettes, empty read-only
+  terminal) while the fetch is in flight, and a graceful
+  fallback if the fetch fails. Server-side `bound_data` plumbing
+  (the path the SSR Protocol already supports via
+  `PresentationData`) is a v0.10 candidate; once that lands the
+  fetch-on-mount can drop in favor of synchronous extraction
+  from the fragment.
+
+- **`AIRLOCK_AXES`** in `LiveScoreAxisCards.tsx` — the three
+  scoring axes (OF=cyan, GC=green, BF=amber) with their level
+  counts (4/4/5). Per-axis accents are fixed by airlock product
+  spec; the level labels themselves come from the evaluator's
+  scoring output (product content, runtime-supplied).
+
+- **`AIRLOCK_BADGE_CATALOG`** in `LiveBadgeStrip.tsx` —
+  hardcoded five-badge fallback (diagnostician / fixer /
+  compassionate / decisive / skeptic) keyed to the airlock
+  scenario. Clearly marked as a v0.9.4 measure pending grammar
+  support for runtime-supplied catalogs; the `BadgeStrip`
+  component itself stays catalog-agnostic.
+
+- **Contract-registration logic in `index.tsx` updated** to pick
+  between the static-prop path (when the IR fragment carries
+  pre-computed props — the path bound_data plumbing will use)
+  and the live path (when the fragment is empty — the v0.9.4
+  norm). Existing tests covering static-prop extraction
+  continue to pass; new tests cover the live path.
+
+  Test count: frontend 64 → 118 passing (54 new tests in
+  `live/*.test.tsx`). Python provider tests unchanged (26/26).
+
 ### Fixed (Path C — Vite library-mode `process.env.NODE_ENV` substitution)
 
 - **`vite.config.ts` now sets `define: { "process.env.NODE_ENV":
