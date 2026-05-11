@@ -94,6 +94,57 @@ const DemoPage: React.FC = () => {
         },
       ],
       [
+        "airlock.score-axis-card",
+        document.getElementById("demo-score-of"),
+        {
+          type: "score-axis-card",
+          props: {
+            title: "Operational Fluency",
+            accent: "cyan",
+            level_label: "Architect",
+            level_description:
+              "Designs and orchestrates AI-assisted workflows.",
+            current_level: 4,
+            max_level: 4,
+            evidence: [
+              "Ran diagnostics_scan early to gather data",
+              "Interpreted JSON tool output without hand-holding",
+            ],
+            next_tip: "You're at the top of this axis. Maintain by mentoring.",
+          },
+        },
+      ],
+      [
+        "airlock.score-axis-card-gc",
+        document.getElementById("demo-score-gc"),
+        {
+          type: "score-axis-card",
+          props: {
+            title: "Generative Capacity",
+            accent: "green",
+            level_label: "Active",
+            level_description: "Generates novel directions and synthesis.",
+            current_level: 2,
+            max_level: 3,
+            evidence: ["Connected sensor data to a system-level hypothesis"],
+            next_tip: "Try framing each tool call as a falsifiable hypothesis.",
+          },
+        },
+      ],
+      [
+        "airlock.score-axis-card-bf",
+        document.getElementById("demo-score-bf"),
+        {
+          type: "score-axis-card",
+          props: {
+            title: "Boundary Fluency",
+            accent: "amber",
+            loading: true,
+            max_level: 4,
+          },
+        },
+      ],
+      [
         "airlock.badge-strip",
         document.getElementById("demo-badge-strip"),
         {
@@ -138,11 +189,11 @@ const DemoPage: React.FC = () => {
 
     for (const [contract, mount, fragment] of mounts) {
       if (!mount) continue;
-      // The "-safe" suffix on the second countdown demo is a dev-only
-      // affordance so we can mount the same renderer twice with
-      // different props. Strip it back to the real contract name for
-      // renderer lookup.
-      const realContract = contract.replace(/-safe$/, "");
+      // Demo-only suffixes (-safe, -gc, -bf, etc.) let us mount the
+      // same renderer multiple times with different sample props.
+      // Strip them back to the real contract name for renderer
+      // lookup.
+      const realContract = contract.replace(/-(safe|gc|bf)$/, "");
       const renderer = renderers.get(realContract);
       if (!renderer) {
         // eslint-disable-next-line no-console
@@ -188,6 +239,23 @@ const DemoPage: React.FC = () => {
         </div>
         <div id="demo-countdown-timer" />
         <div id="demo-countdown-timer-safe" />
+      </div>
+
+      {/* ScoreAxisCard demos pinned bottom-left — 3 axes (OF cyan,
+          GC green, BF amber loading). */}
+      <div
+        className="absolute bottom-4 left-4 z-20 flex flex-col gap-2 items-start
+                   bg-bg-panel/80 backdrop-blur-sm border border-text-muted/40
+                   rounded px-4 py-3 max-w-md"
+      >
+        <div className="text-text-muted text-[10px] uppercase tracking-widest">
+          ScoreAxisCard demos (3 axes — third is loading state)
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full min-w-[48rem]">
+          <div id="demo-score-of" />
+          <div id="demo-score-gc" />
+          <div id="demo-score-bf" />
+        </div>
       </div>
 
       {/* BadgeStrip demo pinned bottom-right. */}

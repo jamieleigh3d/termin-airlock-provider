@@ -22,6 +22,11 @@ import { CosmicOrb } from "./components/CosmicOrb";
 import { ScenarioNarrative, NarrativeLine } from "./components/ScenarioNarrative";
 import { CountdownTimer } from "./components/CountdownTimer";
 import { BadgeStrip, BadgeDef } from "./components/BadgeStrip";
+import {
+  ScoreAxisCard,
+  ScoreAxisCardProps,
+  AxisAccent,
+} from "./components/ScoreAxisCard";
 
 import "./styles/airlock.css";
 
@@ -202,6 +207,69 @@ function extractBadgeStripProps(irFragment: unknown): {
   return result;
 }
 
+/** Pull score-axis-card props out of the IR fragment.
+ *
+ *  The .termin source binds this contract via `Using "airlock.score-axis-card"`
+ *  on a sessions or profiles page; the runtime supplies one fragment
+ *  per axis (the page composes 3 instances for OF/GC/BF). Each
+ *  fragment carries `title`, `accent`, `level_label`, `level_description`,
+ *  `current_level`, `max_level`, optional `evidence` (string[]) and
+ *  `next_tip`, plus optional `loading`.
+ *
+ *  Defensive: an authoring or wiring error must not crash the page;
+ *  missing required fields fall back to a loading-state render so
+ *  the layout slot still occupies space. */
+function extractScoreAxisCardProps(irFragment: unknown): ScoreAxisCardProps {
+  const fallback: ScoreAxisCardProps = {
+    title: "",
+    accent: "cyan",
+    maxLevel: 4,
+    loading: true,
+  };
+  if (!irFragment || typeof irFragment !== "object") return fallback;
+  const props = (irFragment as { props?: Record<string, unknown> }).props ?? {};
+
+  const accentRaw = props.accent;
+  const accent: AxisAccent =
+    accentRaw === "green" || accentRaw === "amber" ? accentRaw : "cyan";
+
+  const result: ScoreAxisCardProps = {
+    title: typeof props.title === "string" ? props.title : "",
+    accent,
+    maxLevel:
+      typeof (props.max_level ?? props.maxLevel) === "number"
+        ? (props.max_level ?? props.maxLevel) as number
+        : 4,
+  };
+
+  if (typeof (props.level_label ?? props.levelLabel) === "string") {
+    result.levelLabel = (props.level_label ?? props.levelLabel) as string;
+  }
+  if (
+    typeof (props.level_description ?? props.levelDescription) === "string"
+  ) {
+    result.levelDescription = (props.level_description ??
+      props.levelDescription) as string;
+  }
+  if (
+    typeof (props.current_level ?? props.currentLevel) === "number"
+  ) {
+    result.currentLevel = (props.current_level ?? props.currentLevel) as number;
+  }
+  if (Array.isArray(props.evidence)) {
+    result.evidence = props.evidence.filter(
+      (e): e is string => typeof e === "string",
+    );
+  }
+  if (typeof (props.next_tip ?? props.nextTip) === "string") {
+    result.nextTip = (props.next_tip ?? props.nextTip) as string;
+  }
+  if (typeof props.loading === "boolean") {
+    result.loading = props.loading;
+  }
+  return result;
+}
+
 // Bootstrap: register one renderer per contract. Slice A2 PoC wires
 // real renderers for cosmic-orb + scenario-narrative; the other four
 // fall back to the slice-A1 placeholder until their slice lands.
@@ -252,6 +320,15 @@ function registerAllContracts(): void {
     },
   );
 
+  window.Termin.registerRenderer(
+    "airlock.score-axis-card",
+    (mountPoint, irFragment) => {
+      const props = extractScoreAxisCardProps(irFragment);
+      const root = createRoot(mountPoint);
+      root.render(<ScoreAxisCard {...props} />);
+    },
+  );
+
   // Placeholder renderers for the contracts not yet implemented in
   // slice A2. Each slice replaces one entry as the component lands.
   const realContracts = new Set([
@@ -259,6 +336,7 @@ function registerAllContracts(): void {
     "airlock.scenario-narrative",
     "airlock.countdown-timer",
     "airlock.badge-strip",
+    "airlock.score-axis-card",
   ]);
   const placeholderContracts = AIRLOCK_CONTRACTS.filter(
     (c) => !realContracts.has(c),
