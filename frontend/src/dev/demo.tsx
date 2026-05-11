@@ -93,6 +93,47 @@ const DemoPage: React.FC = () => {
           },
         },
       ],
+      [
+        "airlock.badge-strip",
+        document.getElementById("demo-badge-strip"),
+        {
+          type: "badge-strip",
+          props: {
+            // Sample 4-badge catalog (generic content for the dev
+            // preview only — production catalog comes from the
+            // .termin source / runtime config, not this repo).
+            catalog: [
+              {
+                key: "first-pass",
+                label: "First Pass",
+                description: "Completed a full provider preview render.",
+                icon: "★",
+              },
+              {
+                key: "tdd-clean",
+                label: "TDD Clean",
+                description: "Test suite green before commit.",
+                icon: "✓",
+              },
+              {
+                key: "spec-aligned",
+                label: "Spec Aligned",
+                description: "Component matches the BRD §13.4 a11y rules.",
+                icon: "◆",
+              },
+              {
+                key: "shipped",
+                label: "Shipped",
+                description: "Slice landed on main.",
+                icon: "▲",
+              },
+            ],
+            // Two earned, two unearned — exercises both visual states
+            // side by side.
+            earned: ["first-pass", "tdd-clean"],
+          },
+        },
+      ],
     ];
 
     for (const [contract, mount, fragment] of mounts) {
@@ -147,6 +188,18 @@ const DemoPage: React.FC = () => {
         </div>
         <div id="demo-countdown-timer" />
         <div id="demo-countdown-timer-safe" />
+      </div>
+
+      {/* BadgeStrip demo pinned bottom-right. */}
+      <div
+        className="absolute bottom-4 right-4 z-20 flex flex-col gap-2 items-end
+                   bg-bg-panel/80 backdrop-blur-sm border border-text-muted/40
+                   rounded px-4 py-3"
+      >
+        <div className="text-text-muted text-[10px] uppercase tracking-widest">
+          BadgeStrip demo (2 earned, 2 unearned)
+        </div>
+        <div id="demo-badge-strip" />
       </div>
 
       {/* Top-left dev-mode label so it's obvious this is the preview

@@ -21,6 +21,7 @@ import { createRoot } from "react-dom/client";
 import { CosmicOrb } from "./components/CosmicOrb";
 import { ScenarioNarrative, NarrativeLine } from "./components/ScenarioNarrative";
 import { CountdownTimer } from "./components/CountdownTimer";
+import { BadgeStrip, BadgeDef } from "./components/BadgeStrip";
 
 import "./styles/airlock.css";
 
@@ -134,6 +135,73 @@ function extractCountdownTimerProps(irFragment: unknown): {
   return result;
 }
 
+/** Pull badge-strip props out of the IR fragment.
+ *
+ *  The .termin source binds this contract via `Using "airlock.badge-strip"`
+ *  on a profile-shaped page; the runtime supplies:
+ *
+ *    - `catalog`: the full badge catalog (label / description / icon
+ *      per badge). The badge spec is product content, not technical
+ *      surface — it lives in the .termin source or a runtime config,
+ *      NOT hardcoded in this provider repo.
+ *    - `earned`: the keys earned by this user. Often comes from a
+ *      `profile.all_badges` field on the runtime side that holds a
+ *      JSON-serialized list of keys.
+ *
+ *  Defensive defaults so a misconfigured fragment renders an empty
+ *  strip rather than crashing the page. */
+function extractBadgeStripProps(irFragment: unknown): {
+  catalog: BadgeDef[];
+  earned: string[];
+} {
+  const result = { catalog: [] as BadgeDef[], earned: [] as string[] };
+  if (!irFragment || typeof irFragment !== "object") return result;
+  const props = (irFragment as { props?: Record<string, unknown> }).props ?? {};
+
+  // catalog: array of {key, label, description, icon} — anything else
+  // gets dropped silently per the existing "rendering errors must
+  // not crash the page" pattern.
+  const rawCatalog = props.catalog;
+  if (Array.isArray(rawCatalog)) {
+    for (const entry of rawCatalog) {
+      if (!entry || typeof entry !== "object") continue;
+      const e = entry as Record<string, unknown>;
+      if (
+        typeof e.key === "string" &&
+        typeof e.label === "string" &&
+        typeof e.icon === "string"
+      ) {
+        result.catalog.push({
+          key: e.key,
+          label: e.label,
+          description: typeof e.description === "string" ? e.description : "",
+          icon: e.icon,
+        });
+      }
+    }
+  }
+
+  // earned: array of strings, OR a JSON-serialized string of an
+  // array (the .termin `text` field shape for `profile.all_badges`).
+  const rawEarned = props.earned ?? props.all_badges;
+  if (Array.isArray(rawEarned)) {
+    result.earned = rawEarned.filter((k): k is string => typeof k === "string");
+  } else if (typeof rawEarned === "string" && rawEarned.length > 0) {
+    try {
+      const parsed = JSON.parse(rawEarned);
+      if (Array.isArray(parsed)) {
+        result.earned = parsed.filter(
+          (k): k is string => typeof k === "string",
+        );
+      }
+    } catch {
+      // Malformed JSON in the field — render with no earned badges
+      // rather than crashing.
+    }
+  }
+  return result;
+}
+
 // Bootstrap: register one renderer per contract. Slice A2 PoC wires
 // real renderers for cosmic-orb + scenario-narrative; the other four
 // fall back to the slice-A1 placeholder until their slice lands.
@@ -175,12 +243,22 @@ function registerAllContracts(): void {
     },
   );
 
+  window.Termin.registerRenderer(
+    "airlock.badge-strip",
+    (mountPoint, irFragment) => {
+      const { catalog, earned } = extractBadgeStripProps(irFragment);
+      const root = createRoot(mountPoint);
+      root.render(<BadgeStrip catalog={catalog} earned={earned} />);
+    },
+  );
+
   // Placeholder renderers for the contracts not yet implemented in
   // slice A2. Each slice replaces one entry as the component lands.
   const realContracts = new Set([
     "airlock.cosmic-orb",
     "airlock.scenario-narrative",
     "airlock.countdown-timer",
+    "airlock.badge-strip",
   ]);
   const placeholderContracts = AIRLOCK_CONTRACTS.filter(
     (c) => !realContracts.has(c),
