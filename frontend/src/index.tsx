@@ -27,6 +27,7 @@ import {
   ScoreAxisCardProps,
   AxisAccent,
 } from "./components/ScoreAxisCard";
+import { Terminal, ConversationEntry } from "./components/Terminal";
 
 import "./styles/airlock.css";
 
@@ -270,6 +271,91 @@ function extractScoreAxisCardProps(irFragment: unknown): ScoreAxisCardProps {
   return result;
 }
 
+/** Pull terminal props out of the IR fragment.
+ *
+ *  The .termin source binds this contract via `Show a chat for
+ *  sessions.conversation_log` + `Using "airlock.terminal"`. The
+ *  runtime supplies:
+ *    - `entries`: the conversation_log entries (the v0.9.2
+ *      conversation field shape — kind/body + optional tool fields).
+ *    - `parent_record_id`: the session id, used as the append-target
+ *      when the user submits the compose input.
+ *    - `conversation_field`: usually "conversation_log" — the field
+ *      name on the parent record.
+ *    - `read_only` (optional): true when the scenario has ended
+ *      (e.g. lifecycle != "scenario"). */
+function extractTerminalProps(irFragment: unknown): {
+  entries: ConversationEntry[];
+  readOnly?: boolean;
+  parentRecordId?: string | number;
+  conversationField?: string;
+} {
+  const result = {
+    entries: [] as ConversationEntry[],
+    readOnly: false as boolean | undefined,
+    parentRecordId: undefined as string | number | undefined,
+    conversationField: undefined as string | undefined,
+  };
+  if (!irFragment || typeof irFragment !== "object") return result;
+  const props = (irFragment as { props?: Record<string, unknown> }).props ?? {};
+
+  // entries: an array, OR a JSON-serialized string (conversation
+  // fields ride as JSON text on aiosqlite per the storage layer
+  // serialization boundary).
+  let raw: unknown = props.entries;
+  if (typeof raw === "string" && raw.length > 0) {
+    try {
+      raw = JSON.parse(raw);
+    } catch {
+      raw = [];
+    }
+  }
+  if (Array.isArray(raw)) {
+    for (const entry of raw) {
+      if (!entry || typeof entry !== "object") continue;
+      const e = entry as Record<string, unknown>;
+      if (typeof e.kind !== "string" || typeof e.id !== "string") continue;
+      result.entries.push({
+        id: e.id,
+        kind: e.kind,
+        body: typeof e.body === "string" ? e.body : "",
+        created_at:
+          typeof e.created_at === "string" ? e.created_at : undefined,
+        appended_by_principal_id:
+          typeof e.appended_by_principal_id === "string"
+            ? e.appended_by_principal_id
+            : undefined,
+        tool_name:
+          typeof e.tool_name === "string" ? e.tool_name : undefined,
+        tool_args:
+          e.tool_args && typeof e.tool_args === "object"
+            ? (e.tool_args as Record<string, unknown>)
+            : undefined,
+        tool_call_id:
+          typeof e.tool_call_id === "string" ? e.tool_call_id : undefined,
+        purpose: typeof e.purpose === "string" ? e.purpose : undefined,
+        is_error: e.is_error === true,
+      });
+    }
+  }
+
+  if (typeof (props.read_only ?? props.readOnly) === "boolean") {
+    result.readOnly = (props.read_only ?? props.readOnly) as boolean;
+  }
+  if (
+    typeof (props.parent_record_id ?? props.parentRecordId) === "string" ||
+    typeof (props.parent_record_id ?? props.parentRecordId) === "number"
+  ) {
+    result.parentRecordId = (props.parent_record_id ??
+      props.parentRecordId) as string | number;
+  }
+  if (typeof (props.conversation_field ?? props.conversationField) === "string") {
+    result.conversationField = (props.conversation_field ??
+      props.conversationField) as string;
+  }
+  return result;
+}
+
 // Bootstrap: register one renderer per contract. Slice A2 PoC wires
 // real renderers for cosmic-orb + scenario-narrative; the other four
 // fall back to the slice-A1 placeholder until their slice lands.
@@ -329,15 +415,40 @@ function registerAllContracts(): void {
     },
   );
 
-  // Placeholder renderers for the contracts not yet implemented in
-  // slice A2. Each slice replaces one entry as the component lands.
-  const realContracts = new Set([
-    "airlock.cosmic-orb",
-    "airlock.scenario-narrative",
-    "airlock.countdown-timer",
-    "airlock.badge-strip",
-    "airlock.score-axis-card",
-  ]);
+  window.Termin.registerRenderer(
+    "airlock.terminal",
+    (mountPoint, irFragment) => {
+      const { entries, readOnly, parentRecordId, conversationField } =
+        extractTerminalProps(irFragment);
+      const root = createRoot(mountPoint);
+      // The runtime exposes window.Termin.action for the chat-input
+      // wiring (see termin-server's static/termin.js). When available,
+      // submitting the input fires an append-to-conversation action.
+      // When absent (rare — tests / preview without action support)
+      // the terminal renders read-only by omitting onSend.
+      const onSend =
+        window.Termin?.action && parentRecordId && conversationField
+          ? (text: string) => {
+              window.Termin!.action!({
+                kind: "append",
+                content: "sessions",
+                record_id: parentRecordId,
+                field: conversationField,
+                payload: { kind: "user", body: text },
+              }).catch((err: unknown) => {
+                // eslint-disable-next-line no-console
+                console.error("[airlock.terminal] action.append failed:", err);
+              });
+            }
+          : undefined;
+      root.render(
+        <Terminal entries={entries} readOnly={readOnly} onSend={onSend} />,
+      );
+    },
+  );
+
+  // All six contracts have real renderers — slice A2 complete.
+  const realContracts = new Set(AIRLOCK_CONTRACTS);
   const placeholderContracts = AIRLOCK_CONTRACTS.filter(
     (c) => !realContracts.has(c),
   );

@@ -145,6 +145,83 @@ const DemoPage: React.FC = () => {
         },
       ],
       [
+        "airlock.terminal",
+        document.getElementById("demo-terminal"),
+        {
+          type: "terminal",
+          props: {
+            // Sample conversation exercising every kind: user,
+            // agent, tool_call, tool_result, system_event. All
+            // generic content — NOT the production Airlock
+            // scenario.
+            entries: [
+              {
+                id: "e1",
+                kind: "user",
+                body: "Run a diagnostic on the airlock please.",
+                created_at: "2026-05-11T03:00:00Z",
+              },
+              {
+                id: "e2",
+                kind: "agent",
+                body:
+                  "Acknowledged. Initiating diagnostic scan of " +
+                  "Airlock 7 systems now.",
+                created_at: "2026-05-11T03:00:01Z",
+              },
+              {
+                id: "e3",
+                kind: "tool_call",
+                body: 'diagnostics_scan({"sensor": "cycle_controller"})',
+                tool_name: "diagnostics_scan",
+                tool_args: { sensor: "cycle_controller" },
+                tool_call_id: "call-0",
+                purpose: "Identify the source of the cycling fault.",
+                created_at: "2026-05-11T03:00:02Z",
+              },
+              {
+                id: "e4",
+                kind: "tool_result",
+                body:
+                  '{"value":{"cycle_controller":{"status":"FAULT",' +
+                  '"check_alpha":"TRIGGERED","check_beta":"TRIGGERED"' +
+                  '}}}',
+                tool_call_id: "call-0",
+                created_at: "2026-05-11T03:00:03Z",
+              },
+              {
+                id: "e5",
+                kind: "agent",
+                body:
+                  "Scan complete. The cycle_controller reports FAULT — " +
+                  "two redundant safety checks are alternating. I " +
+                  "recommend repair_execute with command 'recalibrate " +
+                  "pressure_sensor'.\n\n**Should I proceed?**",
+                created_at: "2026-05-11T03:00:04Z",
+              },
+              {
+                id: "e6",
+                kind: "system_event",
+                body:
+                  "Airlock 7 status: decompression in approximately " +
+                  "4:00. Recommend expediting diagnosis.",
+                created_at: "2026-05-11T03:00:05Z",
+              },
+              {
+                id: "e7",
+                kind: "tool_result",
+                body: "Error: tool diagnostics_scan timed out after 30s",
+                tool_call_id: "call-1",
+                is_error: true,
+                created_at: "2026-05-11T03:00:06Z",
+              },
+            ],
+            parent_record_id: 1,
+            conversation_field: "conversation_log",
+          },
+        },
+      ],
+      [
         "airlock.badge-strip",
         document.getElementById("demo-badge-strip"),
         {
@@ -208,75 +285,72 @@ const DemoPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
-      {/* CosmicOrb fills the viewport behind everything */}
-      <div
-        id="demo-cosmic-orb"
-        className="absolute inset-0 w-full h-full"
-      />
+    <div className="min-h-screen bg-black font-mono p-6 grid grid-cols-12 gap-4 auto-rows-min">
+      {/* Top header strip */}
+      <header className="col-span-12 flex items-center justify-between
+                         bg-bg-panel/80 backdrop-blur-sm border border-text-muted/40
+                         rounded px-4 py-3">
+        <div className="flex items-center gap-4">
+          <span className="px-3 py-1 text-xs bg-bg-elevated text-text-secondary border border-text-muted rounded">
+            DEV PREVIEW · termin-airlock-provider
+          </span>
+          <span className="text-text-muted text-[11px] tracking-widest uppercase">
+            Slice A2 — all six contracts wired
+          </span>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="text-text-muted text-[10px] tracking-widest uppercase">
+            CountdownTimer
+          </span>
+          <div id="demo-countdown-timer" />
+          <div id="demo-countdown-timer-safe" />
+        </div>
+      </header>
 
-      {/* Narrative overlay at the bottom — same layout convention
-          the production inciting-incident page uses. */}
-      <div className="relative z-10 min-h-screen flex flex-col justify-end font-mono">
-        <div
-          className="bg-gradient-to-t from-[#020810] via-[rgba(3,8,16,0.88)] to-transparent
-                     pt-20 pb-10 px-10"
-        >
-          <div id="demo-scenario-narrative" />
+      {/* CosmicOrb thumbnail (left col, 4 wide) + ScenarioNarrative
+          on the right. The orb is a fixed visual asset; the
+          narrative cycles through its typewriter sequence. */}
+      <div className="col-span-4 relative bg-black border border-text-muted/30 rounded overflow-hidden h-72">
+        <div id="demo-cosmic-orb" className="absolute inset-0" />
+        <div className="absolute top-2 left-2 text-[10px] text-text-muted tracking-widest uppercase z-10">
+          airlock.cosmic-orb
         </div>
       </div>
-
-      {/* CountdownTimer demos pinned top-right so we can see the
-          critical-state transition + the safe-state variant side
-          by side. */}
-      <div
-        className="absolute top-2 right-4 z-20 flex flex-col gap-3 items-end
-                   bg-bg-panel/80 backdrop-blur-sm border border-text-muted/40
-                   rounded px-4 py-3"
-      >
-        <div className="text-text-muted text-[10px] uppercase tracking-widest">
-          CountdownTimer demos
+      <div className="col-span-8 bg-bg-panel/80 backdrop-blur-sm border border-text-muted/40 rounded p-4 h-72 overflow-y-auto">
+        <div className="text-[10px] text-text-muted tracking-widest uppercase mb-2">
+          airlock.scenario-narrative
         </div>
-        <div id="demo-countdown-timer" />
-        <div id="demo-countdown-timer-safe" />
+        <div id="demo-scenario-narrative" />
       </div>
 
-      {/* ScoreAxisCard demos pinned bottom-left — 3 axes (OF cyan,
-          GC green, BF amber loading). */}
-      <div
-        className="absolute bottom-4 left-4 z-20 flex flex-col gap-2 items-start
-                   bg-bg-panel/80 backdrop-blur-sm border border-text-muted/40
-                   rounded px-4 py-3 max-w-md"
-      >
-        <div className="text-text-muted text-[10px] uppercase tracking-widest">
-          ScoreAxisCard demos (3 axes — third is loading state)
+      {/* Terminal — 8 wide, full height. The headline component for
+          the scenario page; needs real estate to demonstrate the
+          chat surface, role styling, tool-call inspector, input. */}
+      <div className="col-span-8 bg-bg-panel/80 backdrop-blur-sm border border-text-muted/40 rounded p-2 flex flex-col h-[28rem]">
+        <div className="text-[10px] text-text-muted tracking-widest uppercase px-2 pb-2">
+          airlock.terminal — chat surface (5 entry kinds: user / agent / tool_call / tool_result / system_event)
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full min-w-[48rem]">
-          <div id="demo-score-of" />
-          <div id="demo-score-gc" />
-          <div id="demo-score-bf" />
-        </div>
+        <div id="demo-terminal" className="flex-1 min-h-0 flex flex-col" />
       </div>
 
-      {/* BadgeStrip demo pinned bottom-right. */}
-      <div
-        className="absolute bottom-4 right-4 z-20 flex flex-col gap-2 items-end
-                   bg-bg-panel/80 backdrop-blur-sm border border-text-muted/40
-                   rounded px-4 py-3"
-      >
-        <div className="text-text-muted text-[10px] uppercase tracking-widest">
-          BadgeStrip demo (2 earned, 2 unearned)
+      {/* BadgeStrip — 4 wide */}
+      <div className="col-span-4 bg-bg-panel/80 backdrop-blur-sm border border-text-muted/40 rounded p-3">
+        <div className="text-[10px] text-text-muted tracking-widest uppercase mb-3">
+          airlock.badge-strip (2 earned, 2 unearned)
         </div>
         <div id="demo-badge-strip" />
       </div>
 
-      {/* Top-left dev-mode label so it's obvious this is the preview
-          harness, not the real runtime. */}
-      <div
-        className="absolute top-2 left-2 z-20 px-3 py-1 text-xs font-mono
-                   bg-bg-elevated text-text-secondary border border-text-muted rounded"
-      >
-        DEV PREVIEW · termin-airlock-provider
+      {/* ScoreAxisCard demos — 12 wide, 3 cards across */}
+      <div className="col-span-12 bg-bg-panel/80 backdrop-blur-sm border border-text-muted/40 rounded p-3">
+        <div className="text-[10px] text-text-muted tracking-widest uppercase mb-3">
+          airlock.score-axis-card (OF cyan / GC green / BF amber-loading)
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div id="demo-score-of" />
+          <div id="demo-score-gc" />
+          <div id="demo-score-bf" />
+        </div>
       </div>
     </div>
   );
