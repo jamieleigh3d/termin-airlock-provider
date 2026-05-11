@@ -58,30 +58,60 @@ const DEMO_LINES: NarrativeLine[] = [
 
 const DemoPage: React.FC = () => {
   useEffect(() => {
-    const orbMount = document.getElementById("demo-cosmic-orb");
-    const narrativeMount = document.getElementById("demo-scenario-narrative");
+    const mounts: Array<[string, HTMLElement | null, unknown]> = [
+      [
+        "airlock.cosmic-orb",
+        document.getElementById("demo-cosmic-orb"),
+        { type: "cosmic-orb", props: {} },
+      ],
+      [
+        "airlock.scenario-narrative",
+        document.getElementById("demo-scenario-narrative"),
+        { type: "scenario-narrative", props: { lines: DEMO_LINES } },
+      ],
+      [
+        "airlock.countdown-timer",
+        document.getElementById("demo-countdown-timer"),
+        {
+          type: "countdown-timer",
+          // Set to 35 so the demo crosses the critical-threshold (30s)
+          // a few seconds in — gives a live look at both states without
+          // sitting around for 4½ minutes.
+          props: { remaining_seconds: 35, label: "AIRLOCK 7" },
+        },
+      ],
+      [
+        "airlock.countdown-timer-safe",
+        document.getElementById("demo-countdown-timer-safe"),
+        {
+          type: "countdown-timer",
+          props: {
+            remaining_seconds: 0,
+            is_safe: true,
+            safe_label: "UNLOCKED",
+            label: "REEVES",
+          },
+        },
+      ],
+    ];
 
-    const orbRenderer = renderers.get("airlock.cosmic-orb");
-    const narrativeRenderer = renderers.get("airlock.scenario-narrative");
-
-    if (!orbRenderer || !narrativeRenderer) {
-      // eslint-disable-next-line no-console
-      console.error(
-        "[demo harness] Production entry point did not register one " +
-          "or both renderers. Renderers seen: " +
-          JSON.stringify([...renderers.keys()]),
-      );
-      return;
-    }
-
-    if (orbMount) {
-      orbRenderer(orbMount, { type: "cosmic-orb", props: {} });
-    }
-    if (narrativeMount) {
-      narrativeRenderer(narrativeMount, {
-        type: "scenario-narrative",
-        props: { lines: DEMO_LINES },
-      });
+    for (const [contract, mount, fragment] of mounts) {
+      if (!mount) continue;
+      // The "-safe" suffix on the second countdown demo is a dev-only
+      // affordance so we can mount the same renderer twice with
+      // different props. Strip it back to the real contract name for
+      // renderer lookup.
+      const realContract = contract.replace(/-safe$/, "");
+      const renderer = renderers.get(realContract);
+      if (!renderer) {
+        // eslint-disable-next-line no-console
+        console.error(
+          `[demo harness] No renderer registered for ${realContract}. ` +
+            `Renderers seen: ${JSON.stringify([...renderers.keys()])}`,
+        );
+        continue;
+      }
+      renderer(mount, fragment);
     }
   }, []);
 
@@ -102,6 +132,21 @@ const DemoPage: React.FC = () => {
         >
           <div id="demo-scenario-narrative" />
         </div>
+      </div>
+
+      {/* CountdownTimer demos pinned top-right so we can see the
+          critical-state transition + the safe-state variant side
+          by side. */}
+      <div
+        className="absolute top-2 right-4 z-20 flex flex-col gap-3 items-end
+                   bg-bg-panel/80 backdrop-blur-sm border border-text-muted/40
+                   rounded px-4 py-3"
+      >
+        <div className="text-text-muted text-[10px] uppercase tracking-widest">
+          CountdownTimer demos
+        </div>
+        <div id="demo-countdown-timer" />
+        <div id="demo-countdown-timer-safe" />
       </div>
 
       {/* Top-left dev-mode label so it's obvious this is the preview

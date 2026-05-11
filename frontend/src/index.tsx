@@ -20,6 +20,7 @@ import { createRoot } from "react-dom/client";
 
 import { CosmicOrb } from "./components/CosmicOrb";
 import { ScenarioNarrative, NarrativeLine } from "./components/ScenarioNarrative";
+import { CountdownTimer } from "./components/CountdownTimer";
 
 import "./styles/airlock.css";
 
@@ -93,6 +94,46 @@ function extractNarrativeLines(irFragment: unknown): NarrativeLine[] {
   return candidate as NarrativeLine[];
 }
 
+/** Pull countdown-timer props out of the runtime-supplied IR fragment.
+ *  The .termin source binds this contract via `Using "airlock.countdown-timer"`
+ *  on a sessions page; the runtime computes the props from the bound
+ *  record (e.g. `remaining_seconds = session.timer_seconds - elapsed`,
+ *  `is_safe = session.hatch_unlocked == "yes"`). Defensive defaults
+ *  guarantee the component renders something even when an authoring
+ *  error omits a prop. */
+function extractCountdownTimerProps(irFragment: unknown): {
+  remainingSeconds: number;
+  criticalThreshold?: number;
+  isSafe?: boolean;
+  safeLabel?: string;
+  label?: string;
+} {
+  const fallback = { remainingSeconds: 0 };
+  if (!irFragment || typeof irFragment !== "object") return fallback;
+  const props = (irFragment as { props?: Record<string, unknown> }).props ?? {};
+  const remaining = props.remaining_seconds ?? props.remainingSeconds;
+  const result: ReturnType<typeof extractCountdownTimerProps> = {
+    remainingSeconds: typeof remaining === "number" ? remaining : 0,
+  };
+  if (typeof (props.critical_threshold ?? props.criticalThreshold) === "number") {
+    result.criticalThreshold = (props.critical_threshold ??
+      props.criticalThreshold) as number;
+  }
+  if (typeof props.is_safe === "boolean" || typeof props.isSafe === "boolean") {
+    result.isSafe = (props.is_safe ?? props.isSafe) as boolean;
+  } else if (typeof props.is_safe === "string") {
+    // .termin yes/no fields land as strings — accept "yes" as truthy.
+    result.isSafe = props.is_safe === "yes";
+  }
+  if (typeof (props.safe_label ?? props.safeLabel) === "string") {
+    result.safeLabel = (props.safe_label ?? props.safeLabel) as string;
+  }
+  if (typeof props.label === "string") {
+    result.label = props.label;
+  }
+  return result;
+}
+
 // Bootstrap: register one renderer per contract. Slice A2 PoC wires
 // real renderers for cosmic-orb + scenario-narrative; the other four
 // fall back to the slice-A1 placeholder until their slice lands.
@@ -126,10 +167,23 @@ function registerAllContracts(): void {
     },
   );
 
-  // Placeholder renderers for the four contracts not yet implemented
-  // in slice A2 PoC. Slice A2 follow-on (or A3+) replaces each.
+  window.Termin.registerRenderer(
+    "airlock.countdown-timer",
+    (mountPoint, irFragment) => {
+      const root = createRoot(mountPoint);
+      root.render(<CountdownTimer {...extractCountdownTimerProps(irFragment)} />);
+    },
+  );
+
+  // Placeholder renderers for the contracts not yet implemented in
+  // slice A2. Each slice replaces one entry as the component lands.
+  const realContracts = new Set([
+    "airlock.cosmic-orb",
+    "airlock.scenario-narrative",
+    "airlock.countdown-timer",
+  ]);
   const placeholderContracts = AIRLOCK_CONTRACTS.filter(
-    (c) => c !== "airlock.cosmic-orb" && c !== "airlock.scenario-narrative",
+    (c) => !realContracts.has(c),
   );
   for (const contract of placeholderContracts) {
     window.Termin.registerRenderer(contract, (mountPoint, irFragment) => {

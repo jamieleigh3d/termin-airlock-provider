@@ -52,3 +52,30 @@
   background: var(--color-bg-panel);
   color: var(--color-text-primary);
 }
+
+/* Glow utilities — text-shadow halos for the CRT-terminal aesthetic.
+   Each accent color has a matching glow class. Used by CountdownTimer
+   (cyan idle / red critical) and the Terminal component for role-
+   differentiated message styling. Pure visual ornament; never the
+   sole signal for a state — text labels and icon shapes provide the
+   non-color backup per BRD §13.4. */
+.glow-cyan {
+  text-shadow:
+    0 0 4px rgba(0, 229, 255, 0.6),
+    0 0 12px rgba(0, 229, 255, 0.35);
+}
+.glow-red {
+  text-shadow:
+    0 0 4px rgba(255, 23, 68, 0.7),
+    0 0 12px rgba(255, 23, 68, 0.4);
+}
+.glow-amber {
+  text-shadow:
+    0 0 4px rgba(255, 171, 0, 0.6),
+    0 0 12px rgba(255, 171, 0, 0.35);
+}
+.glow-green {
+  text-shadow:
+    0 0 4px rgba(0, 230, 118, 0.6),
+    0 0 12px rgba(0, 230, 118, 0.35);
+}
