@@ -50,14 +50,16 @@ describe("LiveScoreAxisCards.__test.parseScores", () => {
   });
 
   it("returns the object unchanged when passed an object", () => {
-    const obj = { operational_fluency: { level: 3 } };
+    // Flat-keyed shape per the airlock evaluator's output schema.
+    const obj = { of_level: 3, gc_level: "emergent" };
     expect(__test.parseScores(obj)).toEqual(obj);
   });
 
   it("parses a JSON string (aiosqlite stores structured fields as text)", () => {
-    const json = JSON.stringify({ generative_capacity: { level: 2 } });
+    const json = JSON.stringify({ bf_level: "curious", badges: ["fixer"] });
     expect(__test.parseScores(json)).toEqual({
-      generative_capacity: { level: 2 },
+      bf_level: "curious",
+      badges: ["fixer"],
     });
   });
 
@@ -96,22 +98,19 @@ describe("LiveScoreAxisCards composition", () => {
   });
 
   it("renders each card with its scoring data after fetch resolves", async () => {
+    // Flat-keyed shape — what the airlock evaluator's directive
+    // emits per its OUTPUT schema (numeric of_level, enum-string
+    // gc_level / bf_level).
     const scores = {
-      operational_fluency: {
-        level: 3,
-        level_label: "Architect",
-        level_description: "Directs rather than follows",
-      },
-      generative_capacity: {
-        level: 2,
-        level_label: "Emergent",
-        level_description: "Begins to create transferable value",
-      },
-      boundary_fluency: {
-        level: 1,
-        level_label: "Compliant",
-        level_description: "Stays within spec",
-      },
+      of_level: 3,
+      of_evidence: ["caught the diagnosis flaw"],
+      of_next: "direct ARIA more proactively",
+      gc_level: "emergent",
+      gc_evidence: ["helped Reeves"],
+      gc_next: "create a script",
+      bf_level: "compliant",
+      bf_evidence: [],
+      bf_next: "try probing tools",
     };
     const sessions = [
       { id: 1, lifecycle: "complete", scores },
@@ -131,7 +130,9 @@ describe("LiveScoreAxisCards composition", () => {
       );
       expect(wrap?.getAttribute("data-airlock-state")).toBe("ready");
     });
-    expect(container.textContent).toContain("Architect");
+    // OF emits a numeric level — the wrapper renders "Level 3".
+    expect(container.textContent).toContain("Level 3");
+    // GC and BF emit enum strings, title-cased for display.
     expect(container.textContent).toContain("Emergent");
     expect(container.textContent).toContain("Compliant");
   });
@@ -152,12 +153,7 @@ describe("LiveScoreAxisCards composition", () => {
   it("renders loading per-axis when the scoring object lacks an axis", async () => {
     // Partial scoring: only OF is filled in. GC + BF should
     // render in loading state.
-    const scores = {
-      operational_fluency: {
-        level: 3,
-        level_label: "Architect",
-      },
-    };
+    const scores = { of_level: 3 };
     const sessions = [{ id: 1, lifecycle: "scoring", scores }];
     const fetcher = vi.fn(() =>
       Promise.resolve(new Response(JSON.stringify(sessions), {
@@ -169,7 +165,8 @@ describe("LiveScoreAxisCards composition", () => {
       <LiveScoreAxisCards fetcher={fetcher as never} />,
     );
     await waitFor(() => {
-      expect(container.textContent).toContain("Architect");
+      // OF resolves to numeric level → "Level 3" appears.
+      expect(container.textContent).toContain("Level 3");
     });
     // GC + BF should still be in "Scoring…" placeholder.
     expect(container.textContent).toMatch(/Scoring/i);
