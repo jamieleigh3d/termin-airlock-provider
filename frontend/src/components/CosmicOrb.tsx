@@ -61,7 +61,15 @@ export interface CosmicOrbProps {
 }
 
 export const CosmicOrb: React.FC<CosmicOrbProps> = ({
-  className = "absolute inset-0 w-full h-full",
+  // v0.9.4: dropped the default `absolute inset-0` because it was
+  // overlaying the page's SSR nav bar — players landed on /landing
+  // and had no way to see / click the navigation. The new default
+  // is a viewport-height block in normal document flow: still
+  // visually dominant on Landing, but sits BELOW any chrome the
+  // page renders above it. Pages that genuinely want the orb
+  // full-bleed (no chrome) can pass an absolute-inset className
+  // explicitly.
+  className = "block w-full h-screen pointer-events-none",
 }) => {
   const stars = useMemo(generateStars, []);
   const hatchBolts = useMemo(generateHatchBolts, []);
