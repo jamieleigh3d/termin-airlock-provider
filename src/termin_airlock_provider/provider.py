@@ -37,10 +37,15 @@ from termin_core.providers.presentation_contract import (
 DEFAULT_BUNDLE_URL = "/_termin/providers/airlock/bundle.js"
 
 
-# The six custom contracts this provider implements. Each is registered
+# The custom contracts this provider implements. Each is registered
 # into the ContractRegistry by ``registration.register_airlock`` and
 # the IR's ``Using "airlock.<name>"`` clause binds source-level
 # component types to them.
+#
+# v0.9.4 Phase 1 (Landing prototype) adds airlock.profile-summary +
+# airlock.session-list to the original six (slice A2). The Landing
+# page binds both — profile-summary shows the player's aggregate
+# fluency profile, session-list shows their attempt history.
 AIRLOCK_CONTRACTS: tuple[str, ...] = (
     "airlock.cosmic-orb",
     "airlock.scenario-narrative",
@@ -48,6 +53,8 @@ AIRLOCK_CONTRACTS: tuple[str, ...] = (
     "airlock.countdown-timer",
     "airlock.score-axis-card",
     "airlock.badge-strip",
+    "airlock.profile-summary",
+    "airlock.session-list",
 )
 
 

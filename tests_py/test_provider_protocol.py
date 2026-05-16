@@ -27,10 +27,12 @@ def test_airlock_provider_satisfies_protocol():
     assert isinstance(provider, PresentationProvider)
 
 
-def test_airlock_provider_declares_six_custom_contracts():
-    """Slice A1 declares all six custom contracts in the
+def test_airlock_provider_declares_all_custom_contracts():
+    """The provider declares every custom contract in the
     ``airlock.*`` namespace so the runtime's deploy-time validation
-    is satisfied. Real renderers fill in over slice A2.
+    is satisfied. Slice A1 declared six (the gameplay surface);
+    v0.9.4 Phase 1 added two more (profile-summary + session-list)
+    for the Landing page.
     """
     provider = AirlockProvider()
     declared = set(provider.declared_contracts)
@@ -41,6 +43,8 @@ def test_airlock_provider_declares_six_custom_contracts():
         "airlock.countdown-timer",
         "airlock.score-axis-card",
         "airlock.badge-strip",
+        "airlock.profile-summary",
+        "airlock.session-list",
     }
     assert declared == expected, (
         f"Missing: {expected - declared}; Extra: {declared - expected}"
@@ -67,7 +71,12 @@ def test_airlock_constants_exposed():
     the provider.
     """
     assert "airlock.cosmic-orb" in AIRLOCK_CONTRACTS
-    assert len(AIRLOCK_CONTRACTS) == 6
+    # v0.9.4 Phase 1 added profile-summary + session-list to the
+    # original six for the Landing page; Phase 2 will add
+    # session-detail when the detail-page grammar primitive lands.
+    assert "airlock.profile-summary" in AIRLOCK_CONTRACTS
+    assert "airlock.session-list" in AIRLOCK_CONTRACTS
+    assert len(AIRLOCK_CONTRACTS) == 8
 
 
 def test_render_ssr_raises_not_implemented():

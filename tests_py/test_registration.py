@@ -4,7 +4,7 @@
 # You may obtain a copy of the License at
 #     http://www.apache.org/licenses/LICENSE-2.0
 
-"""register_airlock() registers all six custom contracts against the
+"""register_airlock() registers all eight custom contracts against the
 runtime ContractRegistry and the provider records against them.
 
 Auto-invoked at app startup via the ``termin.providers`` entry point
@@ -23,14 +23,14 @@ from termin_airlock_provider.provider import AIRLOCK_CONTRACTS
 from termin_airlock_provider.registration import PRODUCT_NAME
 
 
-def test_register_airlock_registers_all_six_contracts_in_contract_registry():
+def test_register_airlock_registers_all_contracts_in_contract_registry():
     """register_airlock side-effects the contract_registry: registers
-    all six custom contracts in the ``airlock`` namespace so the
+    all eight custom contracts in the ``airlock`` namespace so the
     runtime's source binding resolver can find them."""
     contracts = ContractRegistry.default()
     registry = ProviderRegistry()
     register_airlock(registry, contracts)
-    # The six contracts are now registered.
+    # Every declared contract is now registered.
     for name in AIRLOCK_CONTRACTS:
         # ContractRegistry exposes a getter — use the same lookup the
         # runtime uses at deploy time.
@@ -44,7 +44,7 @@ def test_register_airlock_registers_all_six_contracts_in_contract_registry():
 
 def test_register_airlock_registers_provider_records():
     """Provider records bind ``airlock`` as the product name to each
-    of the six contracts."""
+    contract."""
     contracts = ContractRegistry.default()
     registry = ProviderRegistry()
     register_airlock(registry, contracts)

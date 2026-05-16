@@ -37,6 +37,8 @@ import { LiveCountdownTimer } from "./components/live/LiveCountdownTimer";
 import { LiveScoreAxisCards } from "./components/live/LiveScoreAxisCards";
 import { LiveBadgeStrip } from "./components/live/LiveBadgeStrip";
 import { LiveTerminal } from "./components/live/LiveTerminal";
+import { LiveProfileSummary } from "./components/live/LiveProfileSummary";
+import { LiveSessionList } from "./components/live/LiveSessionList";
 
 import "./styles/airlock.css";
 
@@ -55,10 +57,14 @@ declare global {
   }
 }
 
-// The six contracts this provider implements. Mirrors
+// The contracts this provider implements. Mirrors
 // AIRLOCK_CONTRACTS in src/termin_airlock_provider/provider.py —
 // keep both lists in lockstep until slice A2 introduces a build-
 // time generator that derives one from the other.
+//
+// v0.9.4 Phase 1 (Landing prototype) adds airlock.profile-summary
+// + airlock.session-list to the original six for the player's
+// home page.
 const AIRLOCK_CONTRACTS = [
   "airlock.cosmic-orb",
   "airlock.scenario-narrative",
@@ -66,6 +72,8 @@ const AIRLOCK_CONTRACTS = [
   "airlock.countdown-timer",
   "airlock.score-axis-card",
   "airlock.badge-strip",
+  "airlock.profile-summary",
+  "airlock.session-list",
 ] as const;
 
 // Slice A1 placeholder component — used for contracts that don't yet
@@ -495,7 +503,31 @@ function registerAllContracts(): void {
     },
   );
 
-  // All six contracts have real renderers — slice A2 complete.
+  // v0.9.4 Phase 1: Landing-page wrappers. Both fetch on mount;
+  // neither needs runtime-supplied IR props today (the v0.10
+  // bound_data path will let the runtime hand the records over
+  // directly). The IR fragment is accepted but ignored.
+  window.Termin.registerRenderer(
+    "airlock.profile-summary",
+    (mountPoint) => {
+      const root = createRoot(mountPoint);
+      root.render(<LiveProfileSummary />);
+    },
+  );
+
+  window.Termin.registerRenderer(
+    "airlock.session-list",
+    (mountPoint) => {
+      const root = createRoot(mountPoint);
+      root.render(<LiveSessionList />);
+    },
+  );
+
+  // All declared contracts have real renderers as of v0.9.4 Phase 1
+  // (the original six from slice A2 plus profile-summary +
+  // session-list from Phase 1). Any future contract that lands
+  // without a renderer falls through to the slice A1 placeholder
+  // so the page still mounts something visible.
   const realContracts = new Set(AIRLOCK_CONTRACTS);
   const placeholderContracts = AIRLOCK_CONTRACTS.filter(
     (c) => !realContracts.has(c),

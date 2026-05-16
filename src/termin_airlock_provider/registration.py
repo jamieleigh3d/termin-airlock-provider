@@ -4,7 +4,7 @@
 # You may obtain a copy of the License at
 #     http://www.apache.org/licenses/LICENSE-2.0
 
-"""register_airlock — registers the six custom Airlock contracts in
+"""register_airlock — registers all custom Airlock contracts in
 the runtime ContractRegistry and the provider records in the
 ProviderRegistry against them.
 
@@ -38,9 +38,9 @@ PRODUCT_NAME = "airlock"
 def register_airlock(
     provider_registry, contract_registry: ContractRegistry | None = None
 ) -> None:
-    """Register the Airlock provider against all six custom contracts.
+    """Register the Airlock provider against all declared contracts.
 
-    Side effect: also registers the six custom contracts in the
+    Side effect: also registers each declared contract in the
     ``contract_registry`` if one is provided. The contracts live in
     the ``airlock`` namespace per BRD #2 §10.4 ("Mandatory Using
     for non-default namespaces") — source-level binding requires an
