@@ -39,6 +39,7 @@ import { LiveBadgeStrip } from "./components/live/LiveBadgeStrip";
 import { LiveTerminal } from "./components/live/LiveTerminal";
 import { LiveProfileSummary } from "./components/live/LiveProfileSummary";
 import { LiveSessionList } from "./components/live/LiveSessionList";
+import { LiveSessionDetail } from "./components/live/LiveSessionDetail";
 
 import "./styles/airlock.css";
 
@@ -74,6 +75,8 @@ const AIRLOCK_CONTRACTS = [
   "airlock.badge-strip",
   "airlock.profile-summary",
   "airlock.session-list",
+  // v0.9.4 Phase 2 detail-page contract.
+  "airlock.session-detail",
 ] as const;
 
 // Slice A1 placeholder component — used for contracts that don't yet
@@ -520,6 +523,20 @@ function registerAllContracts(): void {
     (mountPoint) => {
       const root = createRoot(mountPoint);
       root.render(<LiveSessionList />);
+    },
+  );
+
+  // v0.9.4 Phase 2: Session Detail contract. The wrapper reads
+  // the record id from window.location.pathname and re-fetches
+  // /api/v1/sessions/{id} on mount. Server-side route gating
+  // (404 for missing or other-principal records) happens before
+  // the bundle ever loads; this client wrapper handles the
+  // 404 / load-failed / ready states for display polish.
+  window.Termin.registerRenderer(
+    "airlock.session-detail",
+    (mountPoint) => {
+      const root = createRoot(mountPoint);
+      root.render(<LiveSessionDetail />);
     },
   );
 

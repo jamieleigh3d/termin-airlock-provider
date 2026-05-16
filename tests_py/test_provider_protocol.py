@@ -45,6 +45,7 @@ def test_airlock_provider_declares_all_custom_contracts():
         "airlock.badge-strip",
         "airlock.profile-summary",
         "airlock.session-list",
+        "airlock.session-detail",
     }
     assert declared == expected, (
         f"Missing: {expected - declared}; Extra: {declared - expected}"
@@ -76,7 +77,8 @@ def test_airlock_constants_exposed():
     # session-detail when the detail-page grammar primitive lands.
     assert "airlock.profile-summary" in AIRLOCK_CONTRACTS
     assert "airlock.session-list" in AIRLOCK_CONTRACTS
-    assert len(AIRLOCK_CONTRACTS) == 8
+    assert "airlock.session-detail" in AIRLOCK_CONTRACTS
+    assert len(AIRLOCK_CONTRACTS) == 9
 
 
 def test_render_ssr_raises_not_implemented():

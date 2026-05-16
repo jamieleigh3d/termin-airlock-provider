@@ -177,7 +177,7 @@ describe("LiveSessionList integration", () => {
     expect(rows[1].getAttribute("data-airlock-row")).toBe("1");
   });
 
-  it("renders a View Detail control per row (inert in Phase 1)", async () => {
+  it("renders a View Detail link per row pointing to /session_detail/<id>", async () => {
     const sessions = [{
       id: 99,
       created_at: "2026-05-12T10:00:00Z",
@@ -199,13 +199,44 @@ describe("LiveSessionList integration", () => {
       );
       expect(wrap?.getAttribute("data-airlock-state")).toBe("ready");
     });
-    // The View Detail affordance is rendered as a control with a
-    // testable selector; Phase 2 wires the click handler once the
-    // detail-page grammar primitive lands.
+    // v0.9.4 Phase 2: the View Detail control is now a real link
+    // to the airlock.session-detail page; click navigates.
     const detail = container.querySelector(
       "[data-airlock-action='view-detail']",
     );
     expect(detail).not.toBeNull();
+    expect(detail?.getAttribute("href")).toBe("/session_detail/99");
+  });
+
+  it("uses the custom detailPageSlug prop when provided", async () => {
+    const sessions = [{
+      id: 7,
+      created_at: "2026-05-12T10:00:00Z",
+      lifecycle: "complete",
+      scores: null,
+    }];
+    const fetcher = vi.fn(() =>
+      Promise.resolve(new Response(JSON.stringify(sessions), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })),
+    );
+    const { container } = render(
+      <LiveSessionList
+        fetcher={fetcher as never}
+        detailPageSlug="custom_detail"
+      />,
+    );
+    await waitFor(() => {
+      const wrap = container.querySelector(
+        "[data-airlock-component='session-list']",
+      );
+      expect(wrap?.getAttribute("data-airlock-state")).toBe("ready");
+    });
+    const detail = container.querySelector(
+      "[data-airlock-action='view-detail']",
+    );
+    expect(detail?.getAttribute("href")).toBe("/custom_detail/7");
   });
 
   it("renders load-failed state on fetch error", async () => {

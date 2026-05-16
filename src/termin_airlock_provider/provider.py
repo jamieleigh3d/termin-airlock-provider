@@ -55,6 +55,13 @@ AIRLOCK_CONTRACTS: tuple[str, ...] = (
     "airlock.badge-strip",
     "airlock.profile-summary",
     "airlock.session-list",
+    # v0.9.4 Phase 2: detail-page contract. Renders one session's
+    # full evaluator output (3 ScoreAxisCards in full mode +
+    # summary + calibration + badges). Bound by the Session Detail
+    # page declared with the new `Show a detail page for sessions`
+    # grammar primitive; the React wrapper reads the {id} from the
+    # URL and fetches /api/v1/sessions/{id} on mount.
+    "airlock.session-detail",
 )
 
 

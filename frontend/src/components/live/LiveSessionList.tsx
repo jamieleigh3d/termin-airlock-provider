@@ -12,12 +12,11 @@
 // most-recent-first, and renders one row per attempt with a
 // compact summary (date / lifecycle / top-line OF level).
 //
-// Per-row "View Detail" links are rendered as inert controls in
-// Phase 1; Phase 2 wires them once the detail-page grammar
-// primitive (Show a detail page for <plural>) lands. The carry-
-// through is the `data-airlock-action="view-detail"` selector
-// plus the `data-airlock-row="<id>"` row attribute so the wiring
-// is a one-line click handler later.
+// Per-row "View Detail" links navigate to /session_detail/<id> as
+// of v0.9.4 Phase 2 (when the detail-page grammar primitive
+// landed). The slug is hardcoded against the airlock.termin source
+// authoring; v0.10 will let the wrapper accept a link-target prop
+// when the contract surface allows passing parameterized values.
 
 import React, { useEffect, useState } from "react";
 
@@ -43,6 +42,11 @@ export interface LiveSessionListProps {
   source?: string;
   /** Override fetch for tests. */
   fetcher?: typeof fetch;
+  /** Page slug to navigate to when "View Detail" is clicked.
+   *  Defaults to "session_detail" — the slug derived from the
+   *  airlock.termin source's `Show a detail page for sessions
+   *  called "Session Detail"` directive. */
+  detailPageSlug?: string;
 }
 
 
@@ -130,6 +134,7 @@ function formatDateForDisplay(raw: string | undefined): string {
 export const LiveSessionList: React.FC<LiveSessionListProps> = ({
   source = "sessions",
   fetcher,
+  detailPageSlug = "session_detail",
 }) => {
   const [sessions, setSessions] = useState<SessionRecord[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -214,16 +219,14 @@ export const LiveSessionList: React.FC<LiveSessionListProps> = ({
                 <span className="text-accent-cyan text-sm font-bold tabular-nums">
                   {ofLabel}
                 </span>
-                <button
-                  type="button"
+                <a
                   data-airlock-action="view-detail"
                   data-airlock-target={rowKey}
-                  disabled
-                  className="text-xs px-2 py-1 border border-text-muted text-text-muted rounded cursor-not-allowed"
-                  title="Detail view lands in Phase 2"
+                  href={`/${detailPageSlug}/${rowKey}`}
+                  className="text-xs px-2 py-1 border border-accent-cyan text-accent-cyan rounded hover:bg-accent-cyan hover:text-bg-base transition-colors no-underline"
                 >
                   View Detail
-                </button>
+                </a>
               </li>
             );
           })}
